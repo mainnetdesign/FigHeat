@@ -1,0 +1,13 @@
+{
+  "name": "FigHeat",
+  "id": "REPLACE_WITH_YOUR_ID",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+  "allowedDomains": ["none"],
+  "devAllowedDomains": ["http://localhost:3000"],
+  "reasoning": "Local development of FigHeat backend for computer vision analysis"
+}
+  }
