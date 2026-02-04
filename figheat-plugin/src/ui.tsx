@@ -1,3 +1,14 @@
+/**
+ * FigHeat - Computer Vision Heatmap Analysis for Figma
+ * 
+ * Based on CV Heatmap Explorer (MIT License)
+ * Enhanced and transformed by Mainnet Design (2026)
+ * 
+ * @author Mainnet Design
+ * @website https://mainnet.design
+ * @license MIT
+ */
+
 // src/ui.tsx
 import * as React from "react";
 import { createRoot } from "react-dom/client";
@@ -164,7 +175,7 @@ type ResultState = {
 
 function App() {
   const [baseUrl, setBaseUrl] = React.useState("http://localhost:3000");
-  const [status, setStatus] = React.useState("Pronto");
+  const [status, setStatus] = React.useState("Ready");
   const [error, setError] = React.useState<string | null>(null);
 
   const [abMode, setAbMode] = React.useState(false);
@@ -187,6 +198,9 @@ function App() {
   
   // Estado para exibir insights da opção selecionada
   const [selectedInsights, setSelectedInsights] = React.useState<AnalysisInsights | null>(null);
+  
+  // Estado para hover bidirecional
+  const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 
   const [A, setA] = React.useState<ResultState>({
     bytes: null,
@@ -229,7 +243,7 @@ function App() {
 
       if (msg.type === "ERROR") {
         setError(msg.message);
-        setStatus("Erro");
+        setStatus("Error");
         return;
       }
 
@@ -406,86 +420,55 @@ function App() {
     
     ctx.filter = 'none';
 
-    // Desenha boxes com labels - VISUAL MELHORADO
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(59, 130, 246, 0.85)"; // Azul mais suave
-
+    // Desenha boxes com labels - ESTILO PROFISSIONAL (Hotjar/Clarity)
     for (const b of state.boxes) {
       const x1 = (b.xmin / 100) * canvas.width;
       const y1 = (b.ymin / 100) * canvas.height;
       const x2 = (b.xmax / 100) * canvas.width;
       const y2 = (b.ymax / 100) * canvas.height;
       
-      // Desenha retângulo com cantos arredondados
       const boxWidth = Math.max(1, x2 - x1);
       const boxHeight = Math.max(1, y2 - y1);
-      const cornerRadius = 4;
       
-      ctx.beginPath();
-      ctx.moveTo(x1 + cornerRadius, y1);
-      ctx.lineTo(x2 - cornerRadius, y1);
-      ctx.quadraticCurveTo(x2, y1, x2, y1 + cornerRadius);
-      ctx.lineTo(x2, y2 - cornerRadius);
-      ctx.quadraticCurveTo(x2, y2, x2 - cornerRadius, y2);
-      ctx.lineTo(x1 + cornerRadius, y2);
-      ctx.quadraticCurveTo(x1, y2, x1, y2 - cornerRadius);
-      ctx.lineTo(x1, y1 + cornerRadius);
-      ctx.quadraticCurveTo(x1, y1, x1 + cornerRadius, y1);
-      ctx.closePath();
-      ctx.stroke();
+      // Box SUTIL - linha fina e semi-transparente
+      ctx.strokeStyle = "rgba(59, 130, 246, 0.7)"; // 70% opaco
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x1, y1, boxWidth, boxHeight);
 
-      // Desenha label com confiança - MELHORADO
+      // Desenha label ELEGANTE e DISCRETA
       const label = b.label || "item";
       const confidence = Math.round((b.confidence || 0) * 100);
       const text = `${label} ${confidence}%`;
 
-      // Configuração do texto - MENOR E MAIS ELEGANTE
-      const fontSize = Math.max(10, Math.round(canvas.width * 0.014));
+      // Texto PEQUENO e elegante (estilo Hotjar)
+      const fontSize = Math.max(10, Math.round(canvas.width * 0.012));
       ctx.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
       
-      // Mede o texto
       const metrics = ctx.measureText(text);
       const textWidth = metrics.width;
       const textHeight = fontSize;
       
-      // Padding reduzido
-      const padX = 5;
+      const padX = 6;
       const padY = 3;
       
-      // Posição da caixinha (acima da box)
       const labelX = x1;
-      const labelY = y1 - textHeight - padY * 2 - 2;
+      const labelY = y1 - textHeight - padY * 2 - 4;
       
-      // Desenha caixinha azul de fundo com cantos arredondados e sombra
-      const labelCornerRadius = 3;
-      
-      // Sombra sutil
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+      // Sombra SUTIL
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
       ctx.shadowBlur = 4;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 1;
       
+      // FUNDO AZUL semi-transparente (estilo Hotjar)
       ctx.fillStyle = "rgba(59, 130, 246, 0.92)";
-      ctx.beginPath();
-      ctx.moveTo(labelX + labelCornerRadius, labelY);
-      ctx.lineTo(labelX + textWidth + padX * 2 - labelCornerRadius, labelY);
-      ctx.quadraticCurveTo(labelX + textWidth + padX * 2, labelY, labelX + textWidth + padX * 2, labelY + labelCornerRadius);
-      ctx.lineTo(labelX + textWidth + padX * 2, labelY + textHeight + padY * 2 - labelCornerRadius);
-      ctx.quadraticCurveTo(labelX + textWidth + padX * 2, labelY + textHeight + padY * 2, labelX + textWidth + padX * 2 - labelCornerRadius, labelY + textHeight + padY * 2);
-      ctx.lineTo(labelX + labelCornerRadius, labelY + textHeight + padY * 2);
-      ctx.quadraticCurveTo(labelX, labelY + textHeight + padY * 2, labelX, labelY + textHeight + padY * 2 - labelCornerRadius);
-      ctx.lineTo(labelX, labelY + labelCornerRadius);
-      ctx.quadraticCurveTo(labelX, labelY, labelX + labelCornerRadius, labelY);
-      ctx.closePath();
-      ctx.fill();
+      ctx.fillRect(labelX, labelY, textWidth + padX * 2, textHeight + padY * 2);
       
-      // Remove sombra para o texto
+      // Limpa sombra
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
       
-      // Desenha texto branco
+      // Texto branco
       ctx.fillStyle = "#ffffff";
       ctx.textBaseline = "top";
       ctx.fillText(text, labelX + padX, labelY + padY);
@@ -525,7 +508,7 @@ function App() {
       const localBase64 = await new Promise<string>((resolve, reject) => {
         const r = new FileReader();
         r.onload = () => resolve(String(r.result));
-        r.onerror = () => reject(new Error("Falha ao ler arquivo"));
+        r.onerror = () => reject(new Error("Failed to read file"));
         r.readAsDataURL(file);
       });
 
@@ -543,10 +526,10 @@ function App() {
       if (variant === "A") setA(prev => ({ ...prev, ...next }));
       else setB(prev => ({ ...prev, ...next }));
 
-      setStatus(`Imagem ${variant} carregada`);
+      setStatus(`Image ${variant} loaded`);
       setError(null);
     } catch (err: any) {
-      setError(err.message || "Falha ao processar imagem");
+      setError(err.message || "Failed to process image");
       setStatus("Erro");
     }
   }
@@ -555,7 +538,7 @@ function App() {
     const state = variant === "A" ? A : B;
 
     if (!state.bytes) {
-      setError(`Envie a imagem ${variant} antes.`);
+      setError(`Upload image ${variant} first.`);
       setStatus("Erro");
       return;
     }
@@ -575,31 +558,31 @@ function App() {
   function analyze() {
     if (abMode) {
       if (!A.bytes || !B.bytes) {
-        setError("Envie as duas imagens A e B antes.");
-        setStatus("Erro");
+        setError("Upload both images A and B first.");
+        setStatus("Error");
         return;
       }
       setError(null);
-      setStatus("Analisando A e B...");
+      setStatus("Analyzing A and B...");
       analyzeOne("A");
       analyzeOne("B");
       return;
     }
 
     if (!A.bytes) {
-      setError("Envie uma imagem antes.");
+      setError("Upload an image first.");
       setStatus("Erro");
       return;
     }
 
     setError(null);
-    setStatus("Analisando...");
+    setStatus("Analyzing...");
     analyzeOne("A");
   }
 
   async function analyzeWithVoting() {
     if (!A.bytes || !baseUrl) {
-      setError("Envie uma imagem antes.");
+      setError("Upload an image first.");
       setStatus("Erro");
       return;
     }
@@ -628,7 +611,7 @@ function App() {
     // 🔥 NOVO: Timeout dinâmico
     const timeoutId = setTimeout(() => {
       controller.abort();
-      setError(`⏱️ Timeout: Análise demorou mais de ${timeoutSeconds}s. ${selectedModel === 'gemini-3-pro' ? 'Gemini 3 Pro é mais lento.' : 'Tente uma imagem menor ou desative Quick Mode.'}`);
+      setError(`⏱️ Timeout: Analysis took more than ${timeoutSeconds}s. ${selectedModel === 'gemini-3-pro' ? 'Gemini 3 Pro is slower.' : 'Try a smaller image or disable Quick Mode.'}`);
       setStatus("Timeout");
       setAnalysisController(null);
     }, timeoutMs);
@@ -641,7 +624,7 @@ function App() {
       // Simula progresso enquanto aguarda
       const progressInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        setStatus(`${modeText} ${modelEmoji} | Analisando... ${elapsed}s (máx ${timeoutSeconds}s)`);
+        setStatus(`${modeText} ${modelEmoji} | Analyzing... ${elapsed}s (max ${timeoutSeconds}s)`);
       }, 1000);
 
       const response = await fetch(url, {
@@ -659,13 +642,13 @@ function App() {
       setAnalysisController(null);
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => "Erro desconhecido");
+        const errorText = await response.text().catch(() => "Unknown error");
         
         // 🔥 NOVO: Mensagens de erro mais úteis
         if (response.status === 500) {
-          throw new Error(`Backend Error: ${errorText.includes("JSON") ? "Gemini gerou resposta muito grande. Backend corrigido, tente novamente!" : errorText}`);
+          throw new Error(`Backend Error: ${errorText.includes("JSON") ? "Gemini generated too large response. Backend fixed, try again!" : errorText}`);
         }
-        throw new Error(`Falha na análise (${response.status}): ${errorText}`);
+        throw new Error(`Analysis failed (${response.status}): ${errorText}`);
       }
 
       setStatus(`${modeText} | Processando resultados...`);
@@ -674,18 +657,18 @@ function App() {
       const totalTime = Math.round((Date.now() - startTime) / 1000);
       
       setVotingResults(result);
-      setStatus(`✅ Pronto em ${totalTime}s! Vote na melhor opção.`);
+      setStatus(`✅ Ready in ${totalTime}s! Vote for the best option.`);
     } catch (err: any) {
       clearTimeout(timeoutId);
       setAnalysisController(null);
       
       // 🔥 NOVO: Tratamento melhor de erros
       if (err.name === 'AbortError') {
-        setError("❌ Análise cancelada.");
+        setError("❌ Analysis cancelled.");
         setStatus("Cancelado");
       } else {
-        setError(err.message || "Erro ao gerar variações");
-        setStatus("Erro");
+        setError(err.message || "Failed to generate variations");
+        setStatus("Error");
       }
     }
   }
@@ -695,7 +678,7 @@ function App() {
     if (analysisController) {
       analysisController.abort();
       setAnalysisController(null);
-      setError("Análise cancelada pelo usuário.");
+      setError("Analysis cancelled by user.");
       setStatus("Cancelado");
     }
   }
@@ -784,10 +767,10 @@ function App() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Erro ao salvar voto:', response.status, errorText);
+        console.error('Error saving vote:', response.status, errorText);
         // Não lança erro aqui - apenas loga
         // O estado já foi atualizado, então o usuário vê o resultado mesmo com erro ao salvar
-        setStatus(`⚠️ Voto selecionado (erro ao salvar: ${response.status})`);
+        setStatus(`⚠️ Vote selected (save error: ${response.status})`);
         setError(null); // Não mostra erro ao usuário, apenas aviso no status
         return;
       }
@@ -795,7 +778,7 @@ function App() {
       const result = await response.json();
       console.log('Resposta do servidor:', result);
       
-      setStatus(`✅ Voto registrado! Total: ${result.voteCount}`);
+      setStatus(`✅ Vote registered! Total: ${result.voteCount}`);
       setError(null); // Limpa qualquer erro anterior
       
       console.log('Estado após votar:', {
@@ -806,10 +789,10 @@ function App() {
         hasSelectedInsights: !!winner.insights
       });
     } catch (err: any) {
-      console.error("Erro ao salvar voto:", err);
+      console.error("Error saving vote:", err);
       // Não mostra erro ao usuário - o estado já foi atualizado
       // Apenas avisa no status que houve problema ao salvar
-      setStatus(`⚠️ Voto selecionado (erro ao salvar)`);
+      setStatus(`⚠️ Vote selected (save error)`);
       setError(null); // Não mostra erro ao usuário
     }
   }
@@ -828,7 +811,7 @@ function App() {
 
       const makeSingle = async (variant: Variant) => {
         const state = variant === "A" ? A : B;
-        if (!state.imageBase64) throw new Error(`Sem imagem ${variant}.`);
+        if (!state.imageBase64) throw new Error(`No image ${variant}.`);
 
         const img = await loadImage(state.imageBase64);
 
@@ -844,7 +827,7 @@ function App() {
         canvas.height = outH;
 
         const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Falha ao criar canvas.");
+        if (!ctx) throw new Error("Failed to create canvas.");
 
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, outW, outH);
@@ -866,13 +849,13 @@ function App() {
       let height = 0;
 
       if (!abMode) {
-        if (!A.imageBase64) throw new Error("Carregue uma imagem antes.");
+        if (!A.imageBase64) throw new Error("Load an image first.");
         const c = await makeSingle("A");
         pngBytes = await canvasToPngBytes(c);
         width = c.width;
         height = c.height;
       } else {
-        if (!A.imageBase64 || !B.imageBase64) throw new Error("Carregue A e B antes.");
+        if (!A.imageBase64 || !B.imageBase64) throw new Error("Load A and B first.");
 
         const cA = await makeSingle("A");
         const cB = await makeSingle("B");
@@ -890,7 +873,7 @@ function App() {
         out.height = Math.max(1, Math.round(totalHRaw * scale));
 
         const ctx = out.getContext("2d");
-        if (!ctx) throw new Error("Falha ao criar canvas.");
+        if (!ctx) throw new Error("Failed to create canvas.");
 
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, out.width, out.height);
@@ -920,9 +903,9 @@ function App() {
       };
 
       parent.postMessage({ pluginMessage: msg }, "*");
-      setStatus("Snapshot enviado para export.");
+      setStatus("Snapshot sent to export.");
     } catch (e: any) {
-      setError(e?.message || "Falha ao exportar snapshot.");
+      setError(e?.message || "Failed to export snapshot.");
       setStatus("Erro");
     }
   }
@@ -937,7 +920,7 @@ function App() {
     return new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Falha ao carregar imagem."));
+      img.onerror = () => reject(new Error("Failed to load image."));
       img.src = src;
     });
   }
@@ -948,7 +931,7 @@ function App() {
     const originalBase64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+      reader.onerror = () => reject(new Error("Failed to read file"));
       reader.readAsDataURL(file);
     });
 
@@ -978,7 +961,7 @@ function App() {
     // Converte para JPEG comprimido
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
-        (b) => b ? resolve(b) : reject(new Error("Falha ao comprimir")),
+        (b) => b ? resolve(b) : reject(new Error("Failed to compress")),
         'image/jpeg',
         quality
       );
@@ -1127,11 +1110,11 @@ function App() {
     return new Promise<Uint8Array>((resolve, reject) => {
       canvas.toBlob(async blob => {
         try {
-          if (!blob) return reject(new Error("Falha ao gerar PNG."));
+          if (!blob) return reject(new Error("Failed to generate PNG."));
           const buf = await blob.arrayBuffer();
           resolve(new Uint8Array(buf));
         } catch {
-          reject(new Error("Falha ao converter PNG."));
+          reject(new Error("Failed to convert PNG."));
         }
       }, "image/png");
     });
@@ -1215,12 +1198,31 @@ function App() {
 
   return (
     <div className="wrap">
-      <div className="top">
-        <div>
+      {/* Header com Mainnet Design */}
+      <div className="mainnet-header">
+        <div className="mainnet-brand">
+          <svg className="mainnet-logo-svg" viewBox="0 0 372 103" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M134.364 24.5336H144.018L160.803 65.5184H161.421L178.206 24.5336H187.86V77.2578H180.292V39.1048H179.802L164.253 77.1806H157.971L142.422 39.0791H141.933V77.2578H134.364V24.5336ZM204.516 78.1331C202.01 78.1331 199.745 77.6697 197.72 76.7429C195.694 75.799 194.09 74.4345 192.905 72.6496C191.738 70.8647 191.155 68.6764 191.155 66.0848C191.155 63.8536 191.584 62.0172 192.442 60.5755C193.3 59.1339 194.459 57.9925 195.918 57.1516C197.376 56.3106 199.007 55.6756 200.809 55.2465C202.611 54.8174 204.447 54.4913 206.318 54.2682C208.687 53.9936 210.609 53.7705 212.085 53.5989C213.561 53.4101 214.634 53.1097 215.303 52.6978C215.972 52.2859 216.307 51.6165 216.307 50.6898V50.5095C216.307 48.2612 215.672 46.5192 214.402 45.2835C213.149 44.0477 211.278 43.4299 208.79 43.4299C206.198 43.4299 204.156 44.0048 202.663 45.1547C201.187 46.2875 200.165 47.549 199.599 48.9391L192.365 47.2915C193.223 44.8887 194.476 42.9493 196.124 41.4733C197.788 39.9801 199.702 38.8989 201.864 38.2295C204.027 37.543 206.301 37.1998 208.687 37.1998C210.266 37.1998 211.939 37.3886 213.707 37.7661C215.492 38.1266 217.157 38.7959 218.701 39.7742C220.263 40.7525 221.542 42.1512 222.537 43.9705C223.533 45.7726 224.03 48.1153 224.03 50.9987V77.2578H216.513V71.8515H216.204C215.706 72.847 214.96 73.8252 213.964 74.7864C212.969 75.7475 211.69 76.5456 210.128 77.1806C208.567 77.8156 206.696 78.1331 204.516 78.1331ZM206.19 71.9545C208.318 71.9545 210.137 71.534 211.647 70.693C213.175 69.8521 214.333 68.7536 215.123 67.3978C215.929 66.0247 216.333 64.5573 216.333 62.9955V57.8981C216.058 58.1727 215.526 58.4302 214.737 58.6705C213.964 58.8936 213.08 59.091 212.085 59.2626C211.089 59.417 210.12 59.5629 209.176 59.7002C208.232 59.8204 207.442 59.9234 206.807 60.0092C205.314 60.198 203.95 60.5155 202.714 60.9617C201.495 61.4079 200.517 62.0515 199.779 62.8925C199.058 63.7163 198.698 64.8148 198.698 66.1878C198.698 68.0929 199.402 69.5345 200.809 70.5128C202.216 71.4739 204.01 71.9545 206.19 71.9545ZM228.483 77.2578V37.7146H236.181V77.2578H228.483ZM232.371 31.6133C231.032 31.6133 229.882 31.167 228.921 30.2746C227.977 29.3649 227.505 28.2837 227.505 27.0308C227.505 25.7607 227.977 24.6795 228.921 23.787C229.882 22.8774 231.032 22.4226 232.371 22.4226C233.709 22.4226 234.851 22.8774 235.795 23.787C236.756 24.6795 237.236 25.7607 237.236 27.0308C237.236 28.2837 236.756 29.3649 235.795 30.2746C234.851 31.167 233.709 31.6133 232.371 31.6133ZM248.434 53.7791V77.2578H240.737V37.7146H248.125V44.1507H248.614C249.524 42.0568 250.949 40.3749 252.888 39.1048C254.845 37.8348 257.307 37.1998 260.277 37.1998C262.971 37.1998 265.331 37.7661 267.356 38.8989C269.382 40.0145 270.952 41.6793 272.067 43.8933C273.183 46.1073 273.741 48.8447 273.741 52.1057V77.2578H266.043V53.0325C266.043 50.1663 265.297 47.9265 263.804 46.3132C262.31 44.6828 260.259 43.8675 257.651 43.8675C255.866 43.8675 254.278 44.2537 252.888 45.026C251.515 45.7983 250.425 46.9311 249.619 48.4243C248.829 49.9003 248.434 51.6852 248.434 53.7791ZM285.962 53.7791V77.2578H278.265V37.7146H285.653V44.1507H286.142C287.052 42.0568 288.477 40.3749 290.416 39.1048C292.372 37.8348 294.835 37.1998 297.805 37.1998C300.499 37.1998 302.859 37.7661 304.884 38.8989C306.909 40.0145 308.48 41.6793 309.595 43.8933C310.711 46.1073 311.269 48.8447 311.269 52.1057V77.2578H303.571V53.0325C303.571 50.1663 302.825 47.9265 301.331 46.3132C299.838 44.6828 297.787 43.8675 295.179 43.8675C293.394 43.8675 291.806 44.2537 290.416 45.026C289.043 45.7983 287.953 46.9311 287.146 48.4243C286.357 49.9003 285.962 51.6852 285.962 53.7791ZM332.835 78.0559C328.939 78.0559 325.584 77.2235 322.769 75.5587C319.972 73.8767 317.809 71.5168 316.282 68.479C314.771 65.424 314.016 61.8456 314.016 57.7437C314.016 53.6932 314.771 50.1234 316.282 47.0341C317.809 43.9448 319.937 41.5334 322.666 39.7999C325.412 38.0665 328.622 37.1998 332.295 37.1998C334.526 37.1998 336.688 37.5688 338.782 38.3068C340.876 39.0448 342.755 40.2033 344.42 41.7822C346.085 43.3612 347.398 45.4122 348.359 47.9351C349.32 50.4409 349.801 53.4873 349.801 57.0743V59.8032H318.367V54.0365H342.258C342.258 52.0113 341.846 50.2178 341.022 48.656C340.198 47.077 339.04 45.8327 337.546 44.923C336.07 44.0134 334.337 43.5586 332.346 43.5586C330.184 43.5586 328.296 44.0906 326.682 45.1547C325.086 46.2017 323.85 47.5747 322.975 49.2738C322.117 50.9558 321.688 52.7836 321.688 54.7573V59.2626C321.688 61.9057 322.151 64.154 323.078 66.0076C324.022 67.8612 325.335 69.2771 327.017 70.2554C328.699 71.2165 330.664 71.6971 332.912 71.6971C334.371 71.6971 335.701 71.4911 336.903 71.0792C338.104 70.6501 339.143 70.0151 340.018 69.1741C340.893 68.3331 341.563 67.2948 342.026 66.0591L349.312 67.372C348.728 69.5174 347.681 71.3967 346.171 73.01C344.678 74.6062 342.798 75.8505 340.533 76.7429C338.284 77.6182 335.719 78.0559 332.835 78.0559ZM371 37.7146V43.8933H349.401V37.7146H371ZM355.193 28.2408H362.891V65.6472C362.891 67.1403 363.114 68.2645 363.56 69.0197C364.006 69.7577 364.581 70.264 365.285 70.5386C366.006 70.796 366.787 70.9247 367.628 70.9247C368.246 70.9247 368.786 70.8818 369.25 70.796C369.713 70.7102 370.074 70.6415 370.331 70.5901L371.721 76.9489C371.275 77.1205 370.64 77.2921 369.816 77.4638C368.992 77.6526 367.962 77.7555 366.727 77.7727C364.702 77.807 362.814 77.4466 361.063 76.6914C359.312 75.9363 357.896 74.7692 356.815 73.1902C355.734 71.6112 355.193 69.6289 355.193 67.2433V28.2408Z" fill="white"/>
+            <path d="M113.223 17.3373V10.3579H116.713C117.053 10.3579 117.393 10.4431 117.734 10.6133C118.081 10.7772 118.368 11.0294 118.595 11.3699C118.828 11.704 118.944 12.1201 118.944 12.6182C118.944 13.1226 118.825 13.5513 118.585 13.9044C118.345 14.2574 118.046 14.5254 117.687 14.7082C117.327 14.891 116.968 14.9825 116.609 14.9825H114.131V13.7814H116.173C116.4 13.7814 116.624 13.6837 116.845 13.4882C117.072 13.2928 117.185 13.0028 117.185 12.6182C117.185 12.2147 117.072 11.9373 116.845 11.786C116.624 11.6347 116.41 11.559 116.202 11.559H114.849V17.3373H113.223ZM117.516 14.0651L119.209 17.3373H117.422L115.795 14.0651H117.516ZM115.899 21.4984C114.853 21.4984 113.872 21.303 112.958 20.9121C112.044 20.5212 111.24 19.979 110.547 19.2855C109.853 18.5919 109.311 17.7881 108.92 16.8739C108.529 15.9597 108.334 14.9793 108.334 13.9327C108.334 12.8861 108.529 11.9058 108.92 10.9916C109.311 10.0774 109.853 9.27353 110.547 8.58001C111.24 7.88649 112.044 7.34428 112.958 6.95338C113.872 6.56249 114.853 6.36704 115.899 6.36704C116.946 6.36704 117.926 6.56249 118.84 6.95338C119.755 7.34428 120.558 7.88649 121.252 8.58001C121.945 9.27353 122.488 10.0774 122.879 10.9916C123.269 11.9058 123.465 12.8861 123.465 13.9327C123.465 14.9793 123.269 15.9597 122.879 16.8739C122.488 17.7881 121.945 18.5919 121.252 19.2855C120.558 19.979 119.755 20.5212 118.84 20.9121C117.926 21.303 116.946 21.4984 115.899 21.4984ZM115.899 19.6259C116.946 19.6259 117.898 19.3706 118.755 18.8599C119.619 18.3429 120.306 17.6557 120.817 16.7982C121.328 15.9345 121.583 14.9793 121.583 13.9327C121.583 12.8861 121.328 11.9341 120.817 11.0767C120.306 10.2129 119.619 9.52572 118.755 9.01503C117.898 8.49804 116.946 8.23955 115.899 8.23955C114.853 8.23955 113.897 8.49804 113.034 9.01503C112.17 9.52572 111.483 10.2129 110.972 11.0767C110.461 11.9341 110.206 12.8861 110.206 13.9327C110.206 14.9793 110.461 15.9345 110.972 16.7982C111.483 17.6557 112.17 18.3429 113.034 18.8599C113.897 19.3706 114.853 19.6259 115.899 19.6259Z" fill="white"/>
+            <path d="M46.0626 10L25.6288 10L-9.55385e-06 75.6483L20.4338 75.6483L46.0626 10Z" fill="white"/>
+            <path d="M103.942 10L83.5087 10L57.8799 75.6483L78.3137 75.6483L103.942 10Z" fill="white"/>
+            <path d="M68.2462 26.3516L47.8124 26.3516L22.1836 91.9998L42.6174 91.9998L68.2462 26.3516Z" fill="white"/>
+          </svg>
+          <div className="mainnet-info">
+            <a 
+              href="https://mainnet.design/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="mainnet-link"
+            >
+              mainnet.design
+            </a>
+          </div>
+        </div>
+        <div className="mainnet-product">
           <div className="title">FigHeat</div>
           <div className="sub">Computer Vision Analysis</div>
         </div>
-        <div className="pill">MVP</div>
       </div>
 
       <div className="field">
@@ -1237,7 +1239,7 @@ function App() {
         className="btnGhost"
         onClick={() => {
           setAbMode(v => !v);
-          setStatus("Pronto");
+          setStatus("Ready");
           setError(null);
         }}
       >
@@ -1250,7 +1252,7 @@ function App() {
           onClick={() => {
             setTrainingMode(v => !v);
             setVotingResults(null);
-            setStatus("Pronto");
+            setStatus("Ready");
           }}
         >
           🗳️ Training Mode: {trainingMode ? "ON" : "OFF"}
@@ -1262,7 +1264,7 @@ function App() {
           className={`btnGhost ${quickMode ? 'btnGhostActive' : ''}`}
           onClick={() => {
             setQuickMode(v => !v);
-            setStatus("Pronto");
+            setStatus("Ready");
           }}
         >
           ⚡ Quick Mode: {quickMode ? "ON (1024px)" : "OFF (original)"}
@@ -1271,23 +1273,23 @@ function App() {
 
       {/* Seletor de Modelo */}
       <div className="modelSelector">
-        <div className="label">Modelo de IA</div>
+        <div className="label">AI Model</div>
         <div className="modelOptions">
           <button
             className={`modelOption ${selectedModel === 'gemini-2.0-flash' ? 'modelOptionActive' : ''}`}
             onClick={() => setSelectedModel('gemini-2.0-flash')}
           >
             <div className="modelName">⚡ Gemini 2.0 Flash</div>
-            <div className="modelInfo">Rápido • $0.0015/análise</div>
-            <div className="modelTime">⏱️ ~15-35s</div>
+            <div className="modelInfo">Fast • $0.0015/analysis</div>
+            <div className="modelTime">⏱️ ~15-60s</div>
           </button>
           <button
             className={`modelOption ${selectedModel === 'gemini-3-pro' ? 'modelOptionActive' : ''}`}
             onClick={() => setSelectedModel('gemini-3-pro')}
           >
             <div className="modelName">🧠 Gemini 3 Pro</div>
-            <div className="modelInfo">Avançado • $0.05/análise</div>
-            <div className="modelTime">⏱️ ~60-90s (mais lento)</div>
+            <div className="modelInfo">Advanced • $0.05/analysis</div>
+            <div className="modelTime">⏱️ ~60-120s (mais lento)</div>
           </button>
         </div>
       </div>
@@ -1301,7 +1303,7 @@ function App() {
             onChange={e => pickFile("A", e.target.files?.[0] || null)}
           />
           <div className="dropInner">
-            <div className="dropTitle">Clique para enviar uma imagem</div>
+            <div className="dropTitle">Click to upload an image</div>
             <div className="dropHint">PNG, JPG, WEBP</div>
           </div>
         </div>
@@ -1354,7 +1356,7 @@ function App() {
             fontWeight: 800 
           }}
         >
-          ❌ Cancelar Análise
+          ❌ Cancel Analysis
         </button>
       )}
 
@@ -1367,19 +1369,33 @@ function App() {
       </button>
 
       <div className={`status ${error ? "statusErr" : ""}`}>
-        {error ? `Erro: ${error}` : status}
+        {error ? (
+          `Error: ${error}`
+        ) : status.includes("Analyzing") ? (
+          <div className="status-loading">
+            <svg className="mainnet-loading-svg" viewBox="0 0 104 103" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M113.223 17.3373V10.3579H116.713C117.053 10.3579 117.393 10.4431 117.734 10.6133C118.081 10.7772 118.368 11.0294 118.595 11.3699C118.828 11.704 118.944 12.1201 118.944 12.6182C118.944 13.1226 118.825 13.5513 118.585 13.9044C118.345 14.2574 118.046 14.5254 117.687 14.7082C117.327 14.891 116.968 14.9825 116.609 14.9825H114.131V13.7814H116.173C116.4 13.7814 116.624 13.6837 116.845 13.4882C117.072 13.2928 117.185 13.0028 117.185 12.6182C117.185 12.2147 117.072 11.9373 116.845 11.786C116.624 11.6347 116.41 11.559 116.202 11.559H114.849V17.3373H113.223ZM117.516 14.0651L119.209 17.3373H117.422L115.795 14.0651H117.516ZM115.899 21.4984C114.853 21.4984 113.872 21.303 112.958 20.9121C112.044 20.5212 111.24 19.979 110.547 19.2855C109.853 18.5919 109.311 17.7881 108.92 16.8739C108.529 15.9597 108.334 14.9793 108.334 13.9327C108.334 12.8861 108.529 11.9058 108.92 10.9916C109.311 10.0774 109.853 9.27353 110.547 8.58001C111.24 7.88649 112.044 7.34428 112.958 6.95338C113.872 6.56249 114.853 6.36704 115.899 6.36704C116.946 6.36704 117.926 6.56249 118.84 6.95338C119.755 7.34428 120.558 7.88649 121.252 8.58001C121.945 9.27353 122.488 10.0774 122.879 10.9916C123.269 11.9058 123.465 12.8861 123.465 13.9327C123.465 14.9793 123.269 15.9597 122.879 16.8739C122.488 17.7881 121.945 18.5919 121.252 19.2855C120.558 19.979 119.755 20.5212 118.84 20.9121C117.926 21.303 116.946 21.4984 115.899 21.4984ZM115.899 19.6259C116.946 19.6259 117.898 19.3706 118.755 18.8599C119.619 18.3429 120.306 17.6557 120.817 16.7982C121.328 15.9345 121.583 14.9793 121.583 13.9327C121.583 12.8861 121.328 11.9341 120.817 11.0767C120.306 10.2129 119.619 9.52572 118.755 9.01503C117.898 8.49804 116.946 8.23955 115.899 8.23955C114.853 8.23955 113.897 8.49804 113.034 9.01503C112.17 9.52572 111.483 10.2129 110.972 11.0767C110.461 11.9341 110.206 12.8861 110.206 13.9327C110.206 14.9793 110.461 15.9345 110.972 16.7982C111.483 17.6557 112.17 18.3429 113.034 18.8599C113.897 19.3706 114.853 19.6259 115.899 19.6259Z" fill="black"/>
+              <path className="loading-bar-1" d="M46.0626 10L25.6288 10L-9.55385e-06 75.6483L20.4338 75.6483L46.0626 10Z" fill="black"/>
+              <path className="loading-bar-2" d="M103.942 10L83.5087 10L57.8799 75.6483L78.3137 75.6483L103.942 10Z" fill="black"/>
+              <path className="loading-bar-3" d="M68.2462 26.3516L47.8124 26.3516L22.1836 91.9998L42.6174 91.9998L68.2462 26.3516Z" fill="black"/>
+            </svg>
+            <div className="loading-text">{status}</div>
+          </div>
+        ) : (
+          status
+        )}
       </div>
 
       {/* Interface de Votação */}
       {votingResults && A.imageBase64 && (
         <div className="voting">
-          <div className="votingTitle">🗳️ Vote na melhor análise:</div>
+          <div className="votingTitle">🗳️ Vote for the best analysis:</div>
           
           <div className="votingOptions">
             {/* Opção A */}
             <div className="votingOption">
               <div className="votingLabel">
-                Opção A
+                Option A
                 <span className="votingType">(Conservative)</span>
                 {votingResults.optionA.insights && (
                   <span className={`votingScore ${votingResults.optionA.insights.score >= 80 ? 'scoreHigh' : votingResults.optionA.insights.score >= 60 ? 'scoreMedium' : 'scoreLow'}`}>
@@ -1422,21 +1438,21 @@ function App() {
                 }} />
               </div>
               <div className="votingStats">
-                • {votingResults.optionA.heatmapPoints.length} pontos
-                • {votingResults.optionA.boundingBoxes.length} elementos
+                • {votingResults.optionA.heatmapPoints.length} points
+                • {votingResults.optionA.boundingBoxes.length} elements
               </div>
               <button 
                 className="btn votingBtn"
                 onClick={() => submitVote('A')}
               >
-                ✅ Votar em A
+                ✅ Vote for A
               </button>
             </div>
 
             {/* Opção B */}
             <div className="votingOption">
               <div className="votingLabel">
-                Opção B
+                Option B
                 <span className="votingType">(Creative)</span>
                 {votingResults.optionB.insights && (
                   <span className={`votingScore ${votingResults.optionB.insights.score >= 80 ? 'scoreHigh' : votingResults.optionB.insights.score >= 60 ? 'scoreMedium' : 'scoreLow'}`}>
@@ -1479,14 +1495,14 @@ function App() {
                 }} />
               </div>
               <div className="votingStats">
-                • {votingResults.optionB.heatmapPoints.length} pontos
-                • {votingResults.optionB.boundingBoxes.length} elementos
+                • {votingResults.optionB.heatmapPoints.length} points
+                • {votingResults.optionB.boundingBoxes.length} elements
               </div>
               <button 
                 className="btn votingBtn"
                 onClick={() => submitVote('B')}
               >
-                ✅ Votar em B
+                ✅ Vote for B
               </button>
             </div>
           </div>
@@ -1507,9 +1523,9 @@ function App() {
       {selectedInsights && !votingResults && (
         <div className="insights">
           <div className="insightsHeader">
-            <div className="insightsTitle">🧠 Análise Inteligente</div>
+            <div className="insightsTitle">🧠 Smart Analysis</div>
             <div className="insightsScore">
-              <div className="scoreLabel">Score de Atenção</div>
+              <div className="scoreLabel">Attention Score</div>
               <div className={`scoreValue ${selectedInsights.score >= 80 ? 'scoreHigh' : selectedInsights.score >= 60 ? 'scoreMedium' : 'scoreLow'}`}>
                 {selectedInsights.score}/100
               </div>
@@ -1545,25 +1561,25 @@ function App() {
       {/* Fallback: Sempre mostra resultado após votar (mesmo sem insights) */}
       {!votingResults && !selectedInsights && trainingMode && A.imageBase64 && (
         <div className="summary" style={{ marginTop: '20px', border: '2px solid #4CAF50', padding: '15px' }}>
-          <div className="summaryTitle" style={{ color: '#4CAF50' }}>✅ Voto Registrado!</div>
+          <div className="summaryTitle" style={{ color: '#4CAF50' }}>✅ Vote Registered!</div>
           <div style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
             {A.points.length > 0 || A.boxes.length > 0 ? (
               <>
-                A análise selecionada está sendo exibida acima.
+                The selected analysis is displayed above.
                 <div className="summaryStats" style={{ marginTop: '10px' }}>
                   <div className="stat">
                     <span className="statLabel">Heatmap Points:</span>
                     <span className="statValue">{A.points.length}</span>
                   </div>
                   <div className="stat">
-                    <span className="statLabel">Elementos UI:</span>
+                    <span className="statLabel">UI Elements:</span>
                     <span className="statValue">{A.boxes.length}</span>
                   </div>
                 </div>
               </>
             ) : (
               <div style={{ color: '#ff9800' }}>
-                ⚠️ Aguardando renderização da análise...
+                ⚠️ Waiting for analysis rendering...
               </div>
             )}
           </div>
@@ -1573,7 +1589,7 @@ function App() {
       {/* Painel de Resumo */}
       {!abMode && A.imageBase64 && (A.points.length > 0 || A.boxes.length > 0) && (
         <div className="summary">
-          <div className="summaryTitle">Resumo da Análise</div>
+          <div className="summaryTitle">Analysis Summary</div>
           <div className="summaryStats">
             <div className="stat">
               <span className="statLabel">Heatmap Points:</span>
@@ -1586,16 +1602,38 @@ function App() {
           </div>
           {A.boxes.length > 0 && (
             <div className="summaryList">
-              <div className="summaryListTitle">Top Elementos:</div>
+              <div className="summaryListTitle">TOP ELEMENTS:</div>
               {A.boxes
                 .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-                .slice(0, 5)
-                .map((box, i) => (
-                  <div key={i} className="summaryItem">
-                    <span className="summaryItemLabel">{box.label || "item"}</span>
-                    <span className="summaryItemConf">{Math.round((box.confidence || 0) * 100)}%</span>
-                  </div>
-                ))}
+                .map((box, originalIndex) => {
+                  // Encontra o índice real no array original
+                  const realIndex = A.boxes.indexOf(box);
+                  const isHovered = hoveredIndex === realIndex;
+                  
+                  return (
+                    <div 
+                      key={realIndex} 
+                      className={`summaryItem ${isHovered ? 'summaryItemHovered' : ''}`}
+                      onMouseEnter={() => setHoveredIndex(realIndex)}
+                      onMouseLeave={() => setHoveredIndex(null)}
+                      style={{
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div 
+                        className={`summaryItemNumber ${isHovered ? 'summaryItemNumberHovered' : ''}`}
+                      >
+                        {realIndex + 1}
+                      </div>
+                      <div className="summaryItemContent">
+                        <span className="summaryItemLabel">{box.label || "item"}</span>
+                        <span className={`summaryItemConf ${isHovered ? 'summaryItemConfHovered' : ''}`}>
+                          {Math.round((box.confidence || 0) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>
@@ -1603,7 +1641,7 @@ function App() {
 
       {abMode && (A.imageBase64 || B.imageBase64) && (
         <div className="summary">
-          <div className="summaryTitle">Resumo da Análise A/B</div>
+          <div className="summaryTitle">A/B Analysis Summary</div>
           <div className="abSummary">
             {A.imageBase64 && (A.points.length > 0 || A.boxes.length > 0) && (
               <div className="abSummaryCol">
@@ -1614,7 +1652,7 @@ function App() {
                     <span className="statValue">{A.points.length}</span>
                   </div>
                   <div className="stat">
-                    <span className="statLabel">Elementos:</span>
+                    <span className="statLabel">Elements:</span>
                     <span className="statValue">{A.boxes.length}</span>
                   </div>
                 </div>
@@ -1629,7 +1667,7 @@ function App() {
                     <span className="statValue">{B.points.length}</span>
                   </div>
                   <div className="stat">
-                    <span className="statLabel">Elementos:</span>
+                    <span className="statLabel">Elements:</span>
                     <span className="statValue">{B.boxes.length}</span>
                   </div>
                 </div>
@@ -1671,6 +1709,31 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Footer com Mainnet Design */}
+      <div className="mainnet-footer">
+        <div className="footer-brand">
+          <svg className="footer-logo-svg" viewBox="0 0 372 103" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M134.364 24.5336H144.018L160.803 65.5184H161.421L178.206 24.5336H187.86V77.2578H180.292V39.1048H179.802L164.253 77.1806H157.971L142.422 39.0791H141.933V77.2578H134.364V24.5336ZM204.516 78.1331C202.01 78.1331 199.745 77.6697 197.72 76.7429C195.694 75.799 194.09 74.4345 192.905 72.6496C191.738 70.8647 191.155 68.6764 191.155 66.0848C191.155 63.8536 191.584 62.0172 192.442 60.5755C193.3 59.1339 194.459 57.9925 195.918 57.1516C197.376 56.3106 199.007 55.6756 200.809 55.2465C202.611 54.8174 204.447 54.4913 206.318 54.2682C208.687 53.9936 210.609 53.7705 212.085 53.5989C213.561 53.4101 214.634 53.1097 215.303 52.6978C215.972 52.2859 216.307 51.6165 216.307 50.6898V50.5095C216.307 48.2612 215.672 46.5192 214.402 45.2835C213.149 44.0477 211.278 43.4299 208.79 43.4299C206.198 43.4299 204.156 44.0048 202.663 45.1547C201.187 46.2875 200.165 47.549 199.599 48.9391L192.365 47.2915C193.223 44.8887 194.476 42.9493 196.124 41.4733C197.788 39.9801 199.702 38.8989 201.864 38.2295C204.027 37.543 206.301 37.1998 208.687 37.1998C210.266 37.1998 211.939 37.3886 213.707 37.7661C215.492 38.1266 217.157 38.7959 218.701 39.7742C220.263 40.7525 221.542 42.1512 222.537 43.9705C223.533 45.7726 224.03 48.1153 224.03 50.9987V77.2578H216.513V71.8515H216.204C215.706 72.847 214.96 73.8252 213.964 74.7864C212.969 75.7475 211.69 76.5456 210.128 77.1806C208.567 77.8156 206.696 78.1331 204.516 78.1331ZM206.19 71.9545C208.318 71.9545 210.137 71.534 211.647 70.693C213.175 69.8521 214.333 68.7536 215.123 67.3978C215.929 66.0247 216.333 64.5573 216.333 62.9955V57.8981C216.058 58.1727 215.526 58.4302 214.737 58.6705C213.964 58.8936 213.08 59.091 212.085 59.2626C211.089 59.417 210.12 59.5629 209.176 59.7002C208.232 59.8204 207.442 59.9234 206.807 60.0092C205.314 60.198 203.95 60.5155 202.714 60.9617C201.495 61.4079 200.517 62.0515 199.779 62.8925C199.058 63.7163 198.698 64.8148 198.698 66.1878C198.698 68.0929 199.402 69.5345 200.809 70.5128C202.216 71.4739 204.01 71.9545 206.19 71.9545ZM228.483 77.2578V37.7146H236.181V77.2578H228.483ZM232.371 31.6133C231.032 31.6133 229.882 31.167 228.921 30.2746C227.977 29.3649 227.505 28.2837 227.505 27.0308C227.505 25.7607 227.977 24.6795 228.921 23.787C229.882 22.8774 231.032 22.4226 232.371 22.4226C233.709 22.4226 234.851 22.8774 235.795 23.787C236.756 24.6795 237.236 25.7607 237.236 27.0308C237.236 28.2837 236.756 29.3649 235.795 30.2746C234.851 31.167 233.709 31.6133 232.371 31.6133ZM248.434 53.7791V77.2578H240.737V37.7146H248.125V44.1507H248.614C249.524 42.0568 250.949 40.3749 252.888 39.1048C254.845 37.8348 257.307 37.1998 260.277 37.1998C262.971 37.1998 265.331 37.7661 267.356 38.8989C269.382 40.0145 270.952 41.6793 272.067 43.8933C273.183 46.1073 273.741 48.8447 273.741 52.1057V77.2578H266.043V53.0325C266.043 50.1663 265.297 47.9265 263.804 46.3132C262.31 44.6828 260.259 43.8675 257.651 43.8675C255.866 43.8675 254.278 44.2537 252.888 45.026C251.515 45.7983 250.425 46.9311 249.619 48.4243C248.829 49.9003 248.434 51.6852 248.434 53.7791ZM285.962 53.7791V77.2578H278.265V37.7146H285.653V44.1507H286.142C287.052 42.0568 288.477 40.3749 290.416 39.1048C292.372 37.8348 294.835 37.1998 297.805 37.1998C300.499 37.1998 302.859 37.7661 304.884 38.8989C306.909 40.0145 308.48 41.6793 309.595 43.8933C310.711 46.1073 311.269 48.8447 311.269 52.1057V77.2578H303.571V53.0325C303.571 50.1663 302.825 47.9265 301.331 46.3132C299.838 44.6828 297.787 43.8675 295.179 43.8675C293.394 43.8675 291.806 44.2537 290.416 45.026C289.043 45.7983 287.953 46.9311 287.146 48.4243C286.357 49.9003 285.962 51.6852 285.962 53.7791ZM332.835 78.0559C328.939 78.0559 325.584 77.2235 322.769 75.5587C319.972 73.8767 317.809 71.5168 316.282 68.479C314.771 65.424 314.016 61.8456 314.016 57.7437C314.016 53.6932 314.771 50.1234 316.282 47.0341C317.809 43.9448 319.937 41.5334 322.666 39.7999C325.412 38.0665 328.622 37.1998 332.295 37.1998C334.526 37.1998 336.688 37.5688 338.782 38.3068C340.876 39.0448 342.755 40.2033 344.42 41.7822C346.085 43.3612 347.398 45.4122 348.359 47.9351C349.32 50.4409 349.801 53.4873 349.801 57.0743V59.8032H318.367V54.0365H342.258C342.258 52.0113 341.846 50.2178 341.022 48.656C340.198 47.077 339.04 45.8327 337.546 44.923C336.07 44.0134 334.337 43.5586 332.346 43.5586C330.184 43.5586 328.296 44.0906 326.682 45.1547C325.086 46.2017 323.85 47.5747 322.975 49.2738C322.117 50.9558 321.688 52.7836 321.688 54.7573V59.2626C321.688 61.9057 322.151 64.154 323.078 66.0076C324.022 67.8612 325.335 69.2771 327.017 70.2554C328.699 71.2165 330.664 71.6971 332.912 71.6971C334.371 71.6971 335.701 71.4911 336.903 71.0792C338.104 70.6501 339.143 70.0151 340.018 69.1741C340.893 68.3331 341.563 67.2948 342.026 66.0591L349.312 67.372C348.728 69.5174 347.681 71.3967 346.171 73.01C344.678 74.6062 342.798 75.8505 340.533 76.7429C338.284 77.6182 335.719 78.0559 332.835 78.0559ZM371 37.7146V43.8933H349.401V37.7146H371ZM355.193 28.2408H362.891V65.6472C362.891 67.1403 363.114 68.2645 363.56 69.0197C364.006 69.7577 364.581 70.264 365.285 70.5386C366.006 70.796 366.787 70.9247 367.628 70.9247C368.246 70.9247 368.786 70.8818 369.25 70.796C369.713 70.7102 370.074 70.6415 370.331 70.5901L371.721 76.9489C371.275 77.1205 370.64 77.2921 369.816 77.4638C368.992 77.6526 367.962 77.7555 366.727 77.7727C364.702 77.807 362.814 77.4466 361.063 76.6914C359.312 75.9363 357.896 74.7692 356.815 73.1902C355.734 71.6112 355.193 69.6289 355.193 67.2433V28.2408Z" fill="white"/>
+            <path d="M113.223 17.3373V10.3579H116.713C117.053 10.3579 117.393 10.4431 117.734 10.6133C118.081 10.7772 118.368 11.0294 118.595 11.3699C118.828 11.704 118.944 12.1201 118.944 12.6182C118.944 13.1226 118.825 13.5513 118.585 13.9044C118.345 14.2574 118.046 14.5254 117.687 14.7082C117.327 14.891 116.968 14.9825 116.609 14.9825H114.131V13.7814H116.173C116.4 13.7814 116.624 13.6837 116.845 13.4882C117.072 13.2928 117.185 13.0028 117.185 12.6182C117.185 12.2147 117.072 11.9373 116.845 11.786C116.624 11.6347 116.41 11.559 116.202 11.559H114.849V17.3373H113.223ZM117.516 14.0651L119.209 17.3373H117.422L115.795 14.0651H117.516ZM115.899 21.4984C114.853 21.4984 113.872 21.303 112.958 20.9121C112.044 20.5212 111.24 19.979 110.547 19.2855C109.853 18.5919 109.311 17.7881 108.92 16.8739C108.529 15.9597 108.334 14.9793 108.334 13.9327C108.334 12.8861 108.529 11.9058 108.92 10.9916C109.311 10.0774 109.853 9.27353 110.547 8.58001C111.24 7.88649 112.044 7.34428 112.958 6.95338C113.872 6.56249 114.853 6.36704 115.899 6.36704C116.946 6.36704 117.926 6.56249 118.84 6.95338C119.755 7.34428 120.558 7.88649 121.252 8.58001C121.945 9.27353 122.488 10.0774 122.879 10.9916C123.269 11.9058 123.465 12.8861 123.465 13.9327C123.465 14.9793 123.269 15.9597 122.879 16.8739C122.488 17.7881 121.945 18.5919 121.252 19.2855C120.558 19.979 119.755 20.5212 118.84 20.9121C117.926 21.303 116.946 21.4984 115.899 21.4984ZM115.899 19.6259C116.946 19.6259 117.898 19.3706 118.755 18.8599C119.619 18.3429 120.306 17.6557 120.817 16.7982C121.328 15.9345 121.583 14.9793 121.583 13.9327C121.583 12.8861 121.328 11.9341 120.817 11.0767C120.306 10.2129 119.619 9.52572 118.755 9.01503C117.898 8.49804 116.946 8.23955 115.899 8.23955C114.853 8.23955 113.897 8.49804 113.034 9.01503C112.17 9.52572 111.483 10.2129 110.972 11.0767C110.461 11.9341 110.206 12.8861 110.206 13.9327C110.206 14.9793 110.461 15.9345 110.972 16.7982C111.483 17.6557 112.17 18.3429 113.034 18.8599C113.897 19.3706 114.853 19.6259 115.899 19.6259Z" fill="white"/>
+            <path d="M46.0626 10L25.6288 10L-9.55385e-06 75.6483L20.4338 75.6483L46.0626 10Z" fill="white"/>
+            <path d="M103.942 10L83.5087 10L57.8799 75.6483L78.3137 75.6483L103.942 10Z" fill="white"/>
+            <path d="M68.2462 26.3516L47.8124 26.3516L22.1836 91.9998L42.6174 91.9998L68.2462 26.3516Z" fill="white"/>
+          </svg>
+        </div>
+        <div className="footer-link-wrapper">
+          <a 
+            href="https://mainnet.design/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="footer-link"
+          >
+            mainnet.design
+          </a>
+          <span className="footer-link-cta">Click here</span>
+        </div>
+        <div className="footer-copyright">© 2026 Mainnet Design</div>
+      </div>
     </div>
   );
 }

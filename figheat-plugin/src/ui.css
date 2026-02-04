@@ -767,3 +767,339 @@ html, body {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
 }
+
+/* Hover Bidirecional - Premium Styles */
+.summaryItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  margin-bottom: 8px;
+  transition: all 0.25s ease-out;
+  cursor: pointer;
+}
+
+.summaryItemHovered {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-color: #3b82f6;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  transform: scale(1.01);
+}
+
+.summaryItemNumber {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+  transition: all 0.25s ease-out;
+}
+
+.summaryItemNumberHovered {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
+  transform: scale(1.15);
+}
+
+
+.summaryItemContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.summaryItemLabel {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.3s ease;
+}
+
+.summaryItemHovered .summaryItemLabel {
+  color: #1e40af;
+  font-weight: 700;
+}
+
+.summaryItemConf {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #e0e7ff;
+  color: #4f46e5;
+  flex-shrink: 0;
+  transition: all 0.25s ease-out;
+}
+
+.summaryItemConfHovered {
+  background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%);
+  color: #1e40af;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.summaryList {
+  margin-top: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: visible;
+  padding: 4px;
+}
+
+/* Custom Scrollbar */
+.summaryList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.summaryList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.summaryList::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.4), rgba(37, 99, 235, 0.4));
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.summaryList::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.7), rgba(37, 99, 235, 0.7));
+}
+
+.summaryListTitle {
+  font-weight: 700;
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+/* ===== MAINNET DESIGN BRANDING ===== */
+
+/* Header com Mainnet Design */
+.mainnet-header {
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  padding: 16px;
+  border-bottom: 3px solid #000000;
+  margin-bottom: 16px;
+}
+
+.mainnet-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.mainnet-logo-svg {
+  width: 120px;
+  height: auto;
+}
+
+.mainnet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.mainnet-name {
+  font-size: 16px;
+  font-weight: 400;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.mainnet-link-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mainnet-link {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  display: inline-block;
+  width: fit-content;
+}
+
+.mainnet-link:hover {
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.mainnet-link:focus {
+  outline: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.mainnet-link:focus-visible {
+  outline: none;
+}
+
+.mainnet-link-cta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+}
+
+.mainnet-product {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.mainnet-product .title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.mainnet-product .sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* Loading Animation - Mainnet Progressive */
+.status-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.mainnet-loading-svg {
+  width: 50px;
+  height: auto;
+}
+
+.mainnet-loading-svg .loading-bar-1 {
+  opacity: 0.15;
+  animation: bar-loading 1.2s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.mainnet-loading-svg .loading-bar-2 {
+  opacity: 0.15;
+  animation: bar-loading 1.2s ease-in-out infinite;
+  animation-delay: 0.15s;
+}
+
+.mainnet-loading-svg .loading-bar-3 {
+  opacity: 0.15;
+  animation: bar-loading 1.2s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+@keyframes bar-loading {
+  0%, 100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.loading-text {
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Footer com Mainnet Design */
+.mainnet-footer {
+  margin-top: 24px;
+  padding: 16px;
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  border-top: 3px solid #000000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-logo-svg {
+  width: 100px;
+  height: auto;
+}
+
+.footer-link-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.footer-link {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  display: inline-block;
+  width: fit-content;
+}
+
+.footer-link:hover {
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.footer-link:focus {
+  outline: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.footer-link:focus-visible {
+  outline: none;
+}
+
+.footer-link-cta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+}
+
+.footer-copyright {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}

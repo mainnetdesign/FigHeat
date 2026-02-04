@@ -1,14 +1,14 @@
 {
-  "name": "webpack-react",
+  "name": "figheat-plugin",
   "version": "1.0.0",
-  "description": "",
+  "description": "FigHeat - Computer Vision Heatmap Analysis for Figma by Mainnet Design",
   "main": "code.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "webpack --mode=development --watch",
     "build": "webpack --mode=production"
   },
-  "author": "Figma",
+  "author": "Mainnet Design",
   "license": "MIT",
   "devDependencies": {
     "@figma/plugin-typings": "*",
