@@ -115,6 +115,23 @@ html, body {
   overflow: hidden;
 }
 
+/* Destaque para a área de upload principal (modo Analyze) */
+.drop.dropHighlight {
+  background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 50%, #38bdf8 100%) !important;
+  border: 2px dashed #0284c7 !important;
+  box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.2);
+}
+.drop.dropHighlight .dropInner {
+  background: transparent;
+}
+.drop.dropHighlight .dropTitle {
+  color: #0c4a6e !important;
+  font-weight: 800;
+}
+.drop.dropHighlight .dropHint {
+  color: #0369a1 !important;
+}
+
 .smallDrop .dropInner {
   padding: 16px 10px;
 }
@@ -182,6 +199,45 @@ html, body {
   background: rgba(185, 28, 28, 0.06);
 }
 
+.rowPageType {
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.fieldPageType {
+  flex: 1;
+  min-width: 0;
+}
+
+.selectPageType {
+  width: 100%;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.comingSoon {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+  padding-bottom: 10px;
+}
+
+.landing-only-badge {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.landing-only-badge strong {
+  color: var(--text);
+}
+
 .preview {
   position: relative;
   border-radius: 16px;
@@ -220,6 +276,24 @@ html, body {
   display: flex;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+/* Quick Mode + AI Model na mesma linha, sempre visível (Analyze / A/B / Training) */
+.rowQuickModeModel {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.rowQuickModeModel .modelSelectorInline {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 200px;
+}
+
+.rowQuickModeModel .modelSelectorInline .modelOptions {
+  flex-wrap: wrap;
 }
 
 .chip {
@@ -266,6 +340,28 @@ html, body {
   display: flex;
   gap: 12px;
   margin-top: 12px;
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-items: flex-start;
+}
+.abPreview .preview {
+  flex: 1;
+  min-width: 0;
+}
+
+.abPreview::-webkit-scrollbar {
+  width: 6px;
+}
+
+.abPreview::-webkit-scrollbar-track {
+  background: var(--card);
+  border-radius: 3px;
+}
+
+.abPreview::-webkit-scrollbar-thumb {
+  background: var(--stroke);
+  border-radius: 3px;
 }
 
 .empty {
@@ -349,7 +445,7 @@ html, body {
   padding: 8px 10px;
   border-radius: 10px;
   background: var(--card);
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 
 .summaryItem:last-child {
@@ -732,6 +828,205 @@ html, body {
   opacity: 0.8;
 }
 
+/* Heatmap color row */
+.heatmapColorRow .heatmapColorOptions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Vote stats card (Training Mode) — design organizado */
+.voteStatsCard {
+  padding: 16px 18px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #2878ff;
+}
+.voteStatsCardTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* Dropdown (colapsável) */
+.voteStatsCardDropdown {
+  padding: 0;
+}
+.voteStatsCardDropdown .voteStatsCardTitle {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.voteStatsCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 18px;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  font: inherit;
+  color: inherit;
+}
+.voteStatsCardHeader:hover {
+  background: #f8fafc;
+}
+.voteStatsCardSummary {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.voteStatsCardChevron {
+  font-size: 10px;
+  color: #64748b;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.voteStatsCardChevronOpen {
+  transform: rotate(180deg);
+}
+.voteStatsCardBody {
+  padding: 8px 18px 16px;
+  border-top: 1px solid #e2e8f0;
+}
+.voteStatsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.voteStatsStat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.voteStatsStatValue {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+.voteStatsStatLabel {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+.voteStatsSplit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.voteStatsSplitA {
+  color: #2878ff;
+  font-weight: 600;
+  min-width: 48px;
+}
+.voteStatsSplitB {
+  color: #0ea5e9;
+  font-weight: 600;
+  min-width: 48px;
+}
+.voteStatsSplitBar {
+  flex: 1;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.voteStatsSplitFill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #2878ff, #0ea5e9);
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+.voteStatsStatus {
+  margin-top: 2px;
+}
+.voteStatsBadge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.voteStatsBadgeSuccess {
+  background: #d1fae5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+.voteStatsBadgeProgress {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+.voteStatsActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  margin-top: 4px;
+  border-top: 1px solid #e2e8f0;
+}
+.voteStatsActions .btnGhostSmall {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+}
+.voteStatsActions .btnGhostSmall:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.voteStatsDownloadBtn {
+  margin-left: auto;
+}
+.voteStatsEmpty {
+  text-align: center;
+  padding: 12px 0;
+}
+.voteStatsEmpty p {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 10px 0;
+}
+.btnGhostSmall {
+  padding: 6px 10px;
+  font-size: 12px;
+  min-width: auto;
+}
+.btnSmall {
+  padding: 6px 12px;
+  font-size: 12px;
+  min-width: auto;
+}
+.linkBtn {
+  background: none;
+  border: none;
+  color: #2878ff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+}
+.linkBtn:hover {
+  color: #1d5bbf;
+}
+
 /* Responsividade para telas menores */
 @media (max-width: 600px) {
   .votingOptions {
@@ -777,7 +1072,7 @@ html, body {
   border-radius: 8px;
   background: #f8fafc;
   border: 2px solid #e2e8f0;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
   transition: all 0.25s ease-out;
   cursor: pointer;
 }

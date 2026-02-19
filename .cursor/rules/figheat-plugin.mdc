@@ -1,0 +1,9 @@
+---
+description: Ao alterar o plugin FigHeat, sempre rodar o build ao final.
+globs: figheat-plugin/**
+---
+
+# FigHeat Plugin
+
+- Sempre que fizer qualquer mudança em arquivos do `figheat-plugin` (src, css, config), **execute o build** ao final: `cd figheat-plugin && npm run build`.
+- Isso garante que o plugin compila e que as alterações estão prontas para testar no Figma.

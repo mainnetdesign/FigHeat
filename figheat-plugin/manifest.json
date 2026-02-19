@@ -6,8 +6,8 @@
   "ui": "dist/ui.html",
   "editorType": ["figma"],
   "networkAccess": {
-  "allowedDomains": ["none"],
-  "devAllowedDomains": ["http://localhost:3000"],
-  "reasoning": "Local development of FigHeat backend for computer vision analysis"
-}
+    "allowedDomains": ["*"],
+    "reasoning": "FigHeat connects to the user's API (localhost or hosted) for computer vision heatmap analysis.",
+    "devAllowedDomains": ["http://localhost:3000"]
   }
+}
