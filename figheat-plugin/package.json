@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "webpack --mode=development --watch",
-    "build": "webpack --mode=production"
+    "build": "node --max-old-space-size=4096 node_modules/webpack/bin/webpack.js --mode=production"
   },
   "author": "Mainnet Design",
   "license": "MIT",

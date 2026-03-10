@@ -1014,14 +1014,11 @@ function App() {
     <div className="wrap">
       <Header />
 
-      <div className="row rowPageType">
+      {/* DEV: Page type, Quick Mode, AI Model, Heatmap color, A/B Mode, Training Mode, Progress — descomente para dev */}
+      {/* <div className="row rowPageType">
         <div className="field fieldPageType">
           <div className="label">Page type</div>
-          <select
-            className="input selectPageType"
-            value={pageType}
-            onChange={e => setPageType(e.target.value)}
-          >
+          <select className="input selectPageType" value={pageType} onChange={e => setPageType(e.target.value)}>
             <option value="landing">Landing Page</option>
             <option value="ecommerce" disabled>E-commerce — Coming Soon</option>
             <option value="app" disabled>App / SaaS — Coming Soon</option>
@@ -1035,196 +1032,30 @@ function App() {
           </select>
         </div>
       </div>
-
-      <div className="landing-only-badge" role="status">
-        Optimized for <strong>{{
-          landing: 'Landing Pages',
-          ecommerce: 'E-commerce',
-          app: 'App / SaaS',
-          login: 'Login / Sign up',
-          dashboard: 'Dashboard',
-          pricing: 'Pricing',
-          checkout: 'Checkout',
-          blog: 'Blog / Editorial',
-          onboarding: 'Onboarding',
-          other: 'Other',
-        }[pageType] || 'Landing Pages'}</strong> only
-      </div>
-
-      {/* Quick Mode e AI Model sempre visíveis (Analyze, A/B e Training) — logo abaixo da API */}
+      <div className="landing-only-badge" role="status">Optimized for <strong>{{ landing: 'Landing Pages', ecommerce: 'E-commerce', app: 'App / SaaS', login: 'Login / Sign up', dashboard: 'Dashboard', pricing: 'Pricing', checkout: 'Checkout', blog: 'Blog / Editorial', onboarding: 'Onboarding', other: 'Other' }[pageType] || 'Landing Pages'}</strong> only</div>
       <div className="row rowQuickModeModel">
-        <button
-          className={`btnGhost ${quickMode ? 'btnGhostActive' : ''}`}
-          onClick={() => {
-            setQuickMode(v => !v);
-            setStatus("Ready");
-          }}
-        >
-          ⚡ Quick Mode: {quickMode ? "ON (1024px)" : "OFF (original)"}
-        </button>
+        <button className={`btnGhost ${quickMode ? 'btnGhostActive' : ''}`} onClick={() => { setQuickMode(v => !v); setStatus("Ready"); }}>⚡ Quick Mode: {quickMode ? "ON (1024px)" : "OFF (original)"}</button>
         <div className="modelSelector modelSelectorInline">
           <div className="label">AI Model</div>
           <div className="modelOptions">
-            <button
-              className={`modelOption ${selectedModel === 'gemini-2.0-flash' ? 'modelOptionActive' : ''}`}
-              onClick={() => setSelectedModel('gemini-2.0-flash')}
-            >
-              <div className="modelName">⚡ Flash</div>
-              <div className="modelTime">~15-60s</div>
-            </button>
-            <button
-              className={`modelOption ${selectedModel === 'gemini-3-pro' ? 'modelOptionActive' : ''}`}
-              onClick={() => setSelectedModel('gemini-3-pro')}
-            >
-              <div className="modelName">🧠 Pro</div>
-              <div className="modelTime">~60-120s</div>
-            </button>
+            <button className={`modelOption ${selectedModel === 'gemini-2.0-flash' ? 'modelOptionActive' : ''}`} onClick={() => setSelectedModel('gemini-2.0-flash')}><div className="modelName">⚡ Flash</div><div className="modelTime">~15-60s</div></button>
+            <button className={`modelOption ${selectedModel === 'gemini-3-pro' ? 'modelOptionActive' : ''}`} onClick={() => setSelectedModel('gemini-3-pro')}><div className="modelName">🧠 Pro</div><div className="modelTime">~60-120s</div></button>
           </div>
         </div>
       </div>
-
-      {/* Controle manual do esquema de cores do heatmap */}
       <div className="field heatmapColorRow">
         <div className="label">Heatmap color</div>
         <div className="modelOptions heatmapColorOptions">
-          <button
-            type="button"
-            className={`modelOption ${heatmapColorMode === 'warm' ? 'modelOptionActive' : ''}`}
-            onClick={() => {
-              setHeatmapColorMode('warm');
-              if (A.imageBase64) setTimeout(() => drawOverlay('A'), 0);
-              if (abMode && B.imageBase64) setTimeout(() => drawOverlay('B'), 50);
-            }}
-          >
-            🟠 Laranja
-          </button>
-          <button
-            type="button"
-            className={`modelOption ${heatmapColorMode === 'cool' ? 'modelOptionActive' : ''}`}
-            onClick={() => {
-              setHeatmapColorMode('cool');
-              if (A.imageBase64) setTimeout(() => drawOverlay('A'), 0);
-              if (abMode && B.imageBase64) setTimeout(() => drawOverlay('B'), 50);
-            }}
-          >
-            🔵 Azul
-          </button>
-          <button
-            type="button"
-            className={`modelOption ${heatmapColorMode === 'auto' ? 'modelOptionActive' : ''}`}
-            onClick={() => {
-              setHeatmapColorMode('auto');
-              if (A.imageBase64) setTimeout(() => drawOverlay('A'), 0);
-              if (abMode && B.imageBase64) setTimeout(() => drawOverlay('B'), 50);
-            }}
-          >
-            ✨ Auto
-          </button>
+          <button type="button" className={`modelOption ${heatmapColorMode === 'warm' ? 'modelOptionActive' : ''}`} onClick={() => { setHeatmapColorMode('warm'); if (A.imageBase64) setTimeout(() => drawOverlay('A'), 0); if (abMode && B.imageBase64) setTimeout(() => drawOverlay('B'), 50); }}>🟠 Laranja</button>
+          <button type="button" className={`modelOption ${heatmapColorMode === 'cool' ? 'modelOptionActive' : ''}`} onClick={() => { setHeatmapColorMode('cool'); if (A.imageBase64) setTimeout(() => drawOverlay('A'), 0); if (abMode && B.imageBase64) setTimeout(() => drawOverlay('B'), 50); }}>🔵 Azul</button>
+          <button type="button" className={`modelOption ${heatmapColorMode === 'auto' ? 'modelOptionActive' : ''}`} onClick={() => { setHeatmapColorMode('auto'); if (A.imageBase64) setTimeout(() => drawOverlay('A'), 0); if (abMode && B.imageBase64) setTimeout(() => drawOverlay('B'), 50); }}>✨ Auto</button>
         </div>
       </div>
-
-      <button
-        className="btnGhost"
-        onClick={() => {
-          // Ao alternar modo, limpa overlays para evitar "reuso" visual de resultados antigos
-          clearAnalyzeProgressInterval();
-          analysisInProgressRef.current = false;
-          setAnalysisInProgress(false);
-          setA(prev => ({ ...prev, points: [], boxes: [] }));
-          setB(prev => ({ ...prev, points: [], boxes: [] }));
-          setVotingResults(null);
-          setSelectedInsights(null);
-          setAbMode(v => !v);
-          setStatus("Ready");
-          setError(null);
-        }}
-      >
-        ↔ A/B Mode: {abMode ? "ON" : "OFF"}
-      </button>
-
-      {!abMode && (
-        <button
-          className="btnGhost"
-          onClick={() => {
-            setTrainingMode(v => !v);
-            setVotingResults(null);
-            setStatus("Ready");
-          }}
-        >
-          🗳️ Training Mode: {trainingMode ? "ON" : "OFF"}
-        </button>
-      )}
-
-      {/* Progresso / respostas — dropdown colapsável em todos os modos */}
-      <div className="voteStatsCard voteStatsCardDropdown">
-        <button
-          type="button"
-          className="voteStatsCardHeader"
-          onClick={() => setProgressSectionOpen((o) => !o)}
-          aria-expanded={progressSectionOpen}
-        >
-          <span className="voteStatsCardTitle">📊 Progress</span>
-          {voteStats != null && (
-            <span className="voteStatsCardSummary">
-              {voteStats.totalVotes} responses
-              {voteStats.readyForTraining && " • Ready"}
-            </span>
-          )}
-          <span className={`voteStatsCardChevron ${progressSectionOpen ? "voteStatsCardChevronOpen" : ""}`}>▼</span>
-        </button>
-        {progressSectionOpen && (
-          <div className="voteStatsCardBody">
-            {voteStats ? (
-              <>
-                <div className="voteStatsGrid">
-                  <div className="voteStatsStat">
-                    <span className="voteStatsStatValue">{voteStats.totalVotes}</span>
-                    <span className="voteStatsStatLabel">responses</span>
-                  </div>
-                  {voteStats.totalVotes > 0 && (
-                    <div className="voteStatsSplit">
-                      <span className="voteStatsSplitA">A {voteStats.percentageA}%</span>
-                      <span className="voteStatsSplitBar">
-                        <span className="voteStatsSplitFill" style={{ width: `${voteStats.percentageA}%` }} />
-                      </span>
-                      <span className="voteStatsSplitB">B {voteStats.percentageB}%</span>
-                    </div>
-                  )}
-                  <div className="voteStatsStatus">
-                    {voteStats.readyForTraining ? (
-                      <span className="voteStatsBadge voteStatsBadgeSuccess">✓ Ready for training</span>
-                    ) : (
-                      <span className="voteStatsBadge voteStatsBadgeProgress">{voteStats.message}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="voteStatsActions">
-                  <button type="button" className="btnGhost btnGhostSmall" onClick={fetchVoteStats} title="Refresh">
-                    🔄 Refresh
-                  </button>
-                  {voteStats.readyForTraining && (
-                    <button
-                      type="button"
-                      className="btn btnSmall voteStatsDownloadBtn"
-                      onClick={downloadTrainingDataset}
-                      title="Download JSONL for fine-tuning"
-                    >
-                      📥 Download dataset
-                    </button>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="voteStatsEmpty">
-                <p>Load count from API</p>
-                <button type="button" className="btn btnSmall" onClick={fetchVoteStats}>
-                  Load count
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      <button className="btnGhost" onClick={() => { clearAnalyzeProgressInterval(); analysisInProgressRef.current = false; setAnalysisInProgress(false); setA(prev => ({ ...prev, points: [], boxes: [] })); setB(prev => ({ ...prev, points: [], boxes: [] })); setVotingResults(null); setSelectedInsights(null); setAbMode(v => !v); setStatus("Ready"); setError(null); }}>↔ A/B Mode: {abMode ? "ON" : "OFF"}</button>
+      {!abMode && <button className="btnGhost" onClick={() => { setTrainingMode(v => !v); setVotingResults(null); setStatus("Ready"); }}>🗳️ Training Mode: {trainingMode ? "ON" : "OFF"}</button>}
+      {/* DEV: Progress/voteStatsCard — descomente para dev
+      <div className="voteStatsCard voteStatsCardDropdown">...</div>
+      */}
 
       {!abMode ? (
         <div className="drop dropHighlight">
