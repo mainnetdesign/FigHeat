@@ -146,6 +146,11 @@ html, body {
   flex-shrink: 0;
   display: block;
 }
+img.figheat-logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
 .figheat-upload-header-top {
   font-size: 17px;
   font-weight: 400;

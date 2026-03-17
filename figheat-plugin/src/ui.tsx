@@ -38,6 +38,7 @@ import {
 } from "./lib/imageUtils";
 import { VotingPanel } from "./components/VotingPanel";
 import mainnetLogo from "./assets/Logo_Mainnet.png";
+import vectorLogo from "./assets/Vector.png";
 import { InsightsPanel } from "./components/InsightsPanel";
 import {
   Dropdown,
@@ -1066,7 +1067,7 @@ function App() {
         {/* Linha de header única (border-bottom contínuo em toda a largura) */}
         <div className="flex w-full border-b border-neutral-200 flex-shrink-0">
           <div className="figheat-top-bar-cell figheat-top-bar-cell-left flex flex-[0_0_40%] min-w-[200px] max-w-[320px] items-center gap-2.5 border-r border-neutral-200 pt-4 pb-7">
-            <span className="figheat-logo-flame">🔥</span>
+            <img src={vectorLogo} alt="" className="figheat-logo-flame figheat-logo-img" />
             <span className="figheat-header-title">FigHeat</span>
           </div>
           <div className="figheat-top-bar-cell figheat-top-bar-cell-right flex flex-1 min-w-0 items-center justify-center pt-4 pb-7">
