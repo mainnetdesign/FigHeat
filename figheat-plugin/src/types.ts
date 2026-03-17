@@ -88,7 +88,8 @@ export type UiToCode =
       url: string;
       body?: string | Uint8Array;
       headers?: Record<string, string>;
-    };
+    }
+  | { type: "RESIZE"; width: number; height: number };
 
 export type ColorScheme = 'warm' | 'cool';
 

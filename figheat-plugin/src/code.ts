@@ -1,7 +1,27 @@
 // src/code.ts
 /// <reference types="@figma/plugin-typings" />
 
-figma.showUI(__html__, { width: 720, height: 640 });
+const PLUGIN_SIZE_KEY = "figheat_plugin_size";
+const DEFAULT_W = 560;
+const DEFAULT_H = 620;
+const MIN_W = 480;
+const MIN_H = 520;
+const MAX_W = 1200;
+const MAX_H = 900;
+
+figma.showUI(__html__, { width: DEFAULT_W, height: DEFAULT_H });
+
+// Restore saved size on load
+(async () => {
+  try {
+    const stored = (await figma.clientStorage.getAsync(PLUGIN_SIZE_KEY)) as { w?: number; h?: number } | undefined;
+    if (stored?.w != null && stored?.h != null) {
+      const w = Math.round(Math.max(MIN_W, Math.min(MAX_W, stored.w)));
+      const h = Math.round(Math.max(MIN_H, Math.min(MAX_H, stored.h)));
+      figma.ui.resize(w, h);
+    }
+  } catch (_) {}
+})();
 
 // Polyfill global: define AbortController no sandbox do plugin Figma
 (function () {
@@ -95,7 +115,8 @@ type UiToCode =
       url: string;
       body?: string | Uint8Array;
       headers?: Record<string, string>;
-    };
+    }
+  | { type: "RESIZE"; width: number; height: number };
 
 type CodeToUi =
   | { type: "STATUS"; message: string }
@@ -135,6 +156,14 @@ let currentAnalyzeController: AbortController | null = null;
 
 figma.ui.onmessage = async (msg: UiToCode) => {
   try {
+    if (msg.type === "RESIZE") {
+      const w = Math.round(Math.max(MIN_W, Math.min(MAX_W, msg.width)));
+      const h = Math.round(Math.max(MIN_H, Math.min(MAX_H, msg.height)));
+      figma.ui.resize(w, h);
+      await figma.clientStorage.setAsync(PLUGIN_SIZE_KEY, { w, h });
+      return;
+    }
+
     if (msg.type === "CANCEL_ANALYSIS") {
       if (currentAnalyzeController) {
         currentAnalyzeController.abort();

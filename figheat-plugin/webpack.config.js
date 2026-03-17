@@ -20,14 +20,17 @@ module.exports = (env, argv) => ({
       // Converts TypeScript code to JavaScript
       {
         test: /\.tsx?$/,
-        use: 'ts-loader',
+        use: {
+          loader: 'ts-loader',
+          options: { transpileOnly: true },
+        },
         exclude: /node_modules/,
       },
 
       // Enables including CSS by doing "import './file.css'" in your TypeScript code
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
+        use: ['style-loader', 'css-loader', 'postcss-loader'],
       },
       // Allows you to use "<%= require('./file.svg') %>" in your HTML code to get a data URI
       // { test: /\.(png|jpg|gif|webp|svg|zip)$/, loader: [{ loader: 'url-loader' }] }
@@ -35,11 +38,24 @@ module.exports = (env, argv) => ({
         test: /\.svg/,
         type: 'asset/inline',
       },
+      {
+        test: /\.(png|jpg|jpeg|gif|webp)$/,
+        type: 'asset/inline',
+      },
     ],
   },
 
   // Webpack tries these extensions for you if you omit the extension like "import './file'"
-  resolve: { extensions: ['.tsx', '.ts', '.jsx', '.js'] },
+  resolve: {
+    extensions: ['.tsx', '.ts', '.jsx', '.js'],
+    modules: [path.resolve(__dirname, 'node_modules'), 'node_modules'],
+    symlinks: true,
+  },
+
+  // Desativa minificação em produção para evitar a cadeia quebrada terser → schema-utils → ajv
+  optimization: {
+    minimize: false,
+  },
 
   output: {
     filename: (pathData) => {

@@ -2,20 +2,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Figma design tokens */
+  /* Figma plugin - structured, technical, precise */
   --bg: #ffffff;
   --text: #0e121b;
   --muted: #525866;
   --muted-soft: #99a0ae;
   --stroke: #e1e4ea;
   --card: #f8f9fb;
-  --shadow: 0 1px 2px rgba(10, 13, 20, 0.03);
-  --shadow-lg: 0 10px 30px rgba(10, 13, 20, 0.08);
-  --radius-6: 6px;
-  --radius-8: 8px;
-  --radius-10: 10px;
-  --radius-full: 999px;
+  --shadow: 0 1px 2px rgba(10, 13, 20, 0.02);
   --accent: #0e121b;
+  --radius: 2px;
+  --radius-6: 2px;
+  --radius-8: 2px;
+  --radius-10: 2px;
+  --radius-full: 2px;
 }
 
 * { box-sizing: border-box; }
@@ -23,9 +23,45 @@
 html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
   background: var(--bg);
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  border-radius: 0 !important;
+}
+
+#react-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0 !important;
+  overflow: hidden;
+}
+
+.figheat-app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border-radius: 0 !important;
+}
+
+/* Resize handle - canto inferior direito (arrastar para redimensionar) */
+.figheat-resize-handle {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  z-index: 9999;
+  border-top: 2px solid var(--stroke);
+  border-left: 2px solid var(--stroke);
+  border-radius: 4px 0 0 0;
+}
+.figheat-resize-handle:hover {
+  border-color: var(--muted-soft);
 }
 
 .wrap {
@@ -35,6 +71,228 @@ html, body {
   gap: 12px;
   min-width: 100%;
   max-width: 100%;
+}
+
+/* Layout duas colunas - linha no topo + 8px grid */
+.figheat-two-col {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid var(--stroke);
+  border-bottom: 1px solid var(--stroke);
+}
+.figheat-left-panel {
+  flex: 0 0 48%;
+  min-width: 240px;
+  max-width: 320px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-right: 1px solid var(--stroke);
+}
+.figheat-right-panel {
+  flex: 1;
+  min-width: 180px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* Top bar - structured (também usado nas células quando a linha vertical sobe) */
+.figheat-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--stroke);
+  flex-shrink: 0;
+  gap: 16px;
+}
+.figheat-top-bar-cell .figheat-header-title,
+.figheat-top-bar .figheat-header-title {
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.figheat-top-bar-cell .figheat-upload-header-top,
+.figheat-top-bar .figheat-upload-header-top {
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--text);
+  flex-shrink: 1;
+  min-width: 0;
+}
+/* Alinhamento simétrico em relação à linha vertical: mesmo espaço entre conteúdo e linha */
+.figheat-top-bar-cell-left {
+  padding-left: 16px;
+  padding-right: 8px;
+}
+.figheat-top-bar-cell-right {
+  padding-left: 8px;
+  padding-right: 16px;
+}
+.figheat-top-bar .figheat-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.figheat-logo-flame {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: block;
+}
+.figheat-upload-header-top {
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--text);
+  flex-shrink: 1;
+  min-width: 0;
+}
+.figheat-settings-trigger {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  align-self: flex-start;
+  margin-bottom: 4px;
+}
+.figheat-settings-trigger:hover {
+  background: var(--stroke);
+  color: var(--text);
+}
+
+.figheat-upload-header {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 8px;
+}
+.figheat-drop-new {
+  flex: 1;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  border: 1px dashed var(--stroke);
+  background: var(--card);
+  border-radius: var(--radius);
+}
+.figheat-cloud-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+.figheat-actions-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--stroke);
+}
+
+.figheat-content {
+  padding: 0 16px 16px;
+  flex-shrink: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Mobile / telas estreitas */
+@media (max-width: 520px) {
+  .figheat-top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+  }
+  .figheat-upload-header-top {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text);
+    flex-shrink: 1;
+    min-width:0;
+    margin-right: 24px;
+
+  }
+  .figheat-two-col {
+    flex-direction: column;
+  }
+  .figheat-left-panel {
+    max-width: none;
+    min-width: 0;
+    padding: 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--stroke);
+  }
+  .figheat-right-panel {
+    padding: 12px;
+    min-height: 140px;
+    flex: 1;
+    min-height: 0;
+  }
+  .figheat-drop-new {
+    min-height: 120px;
+    max-height: 180px;
+    padding: 16px;
+  }
+  .figheat-model-card {
+    padding: 14px;
+    min-height: 44px;
+  }
+  .figheat-model-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+  .btn {
+    min-height: 44px;
+    padding: 12px 14px;
+  }
+  .figheat-footer {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px 12px 16px;
+    flex-shrink: 0;
+    font-size: 11px;
+  }
+  .figheat-footer-left,
+  .figheat-footer-right {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  .figheat-footer-left span,
+  .figheat-footer-right span {
+    flex-shrink: 0;
+  }
+  .figheat-footer-icon {
+    width: 18px;
+    height: 18px;
+  }
+  .figheat-footer-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+  .figheat-mainnet-logo {
+    height: 20px;
+  }
+  .figheat-content {
+    padding: 0 12px 12px;
+  }
+  .input, .selectPageType {
+    min-height: 44px;
+  }
 }
 
 .top {
@@ -71,21 +329,20 @@ html, body {
   font-size: 14px;
   font-weight: 500;
   color: var(--text);
-  margin-bottom: 6px;
-  letter-spacing: -0.084px;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
   line-height: 20px;
 }
 
 .input {
   width: 100%;
   border: 1px solid var(--stroke);
-  border-radius: var(--radius-10);
-  padding: 10px 12px;
+  border-radius: var(--radius);
+  padding: 8px 12px;
   outline: none;
   font-size: 14px;
   line-height: 20px;
   background: var(--bg);
-  box-shadow: var(--shadow);
 }
 
 .slider {
@@ -179,15 +436,15 @@ html, body {
 .btn {
   width: 100%;
   border: 0;
-  border-radius: var(--radius-10);
-  padding: 10px 14px;
+  border-radius: 10px;
+  padding: 12px 16px;
   color: #fff;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
   line-height: 20px;
   cursor: pointer;
-  background: var(--accent);
-  box-shadow: 0 1px 2px rgba(27, 28, 29, 0.48), 0 0 0 1px #242628;
+  background: #171717;
+  border: 1px solid #171717;
 }
 
 .btnGhost {
@@ -1212,7 +1469,262 @@ html, body {
   border-bottom: 1px solid var(--stroke);
 }
 
-/* ===== MAINNET DESIGN BRANDING ===== */
+/* ===== FIGHEAT NEW DESIGN (Figma Pluginsnnet) ===== */
+
+/* Header compacto - FigHeat */
+.figheat-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--stroke);
+  margin-bottom: 12px;
+}
+
+.figheat-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.figheat-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 41px;
+  height: 41px;
+}
+
+.figheat-header-title {
+  font-size: 33px;
+  font-weight: 400;
+  letter-spacing: -1.65px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.figheat-header-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin-left: 51px;
+}
+
+/* Layout duas colunas - modo Analyze */
+.figheat-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.figheat-upload-section {
+  margin-top: 4px;
+}
+
+.figheat-upload-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 12px;
+  text-align: center;
+  letter-spacing: -0.176px;
+}
+
+/* Drop zone novo design */
+.figheat-drop {
+  background: #f7f7f7;
+  border: 1px dashed var(--stroke);
+  border-radius: var(--radius-10);
+  padding: 32px;
+  text-align: center;
+  position: relative;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.figheat-drop-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
+}
+
+.figheat-drop-hint {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.figheat-drop-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.figheat-drop-btn:hover {
+  background: var(--card);
+  border-color: var(--muted-soft);
+}
+
+/* AI Model cards - card style selector */
+.figheat-model-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.figheat-model-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--bg);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+
+.figheat-model-card:hover {
+  border-color: var(--accent);
+}
+
+.figheat-model-card.figheat-model-card-active {
+  border-color: var(--accent);
+  border-width: 1px;
+}
+
+.figheat-model-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.figheat-model-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.figheat-model-time {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.figheat-model-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--stroke);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.figheat-model-card-active .figheat-model-radio {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+/* Footer - structured, minimal */
+.figheat-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 16px 28px 16px 16px;
+  margin-top: 0;
+  border-top: 1px solid var(--stroke);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+.figheat-footer-left,
+.figheat-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.figheat-footer a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.figheat-footer a:hover {
+  color: var(--text);
+}
+
+.figheat-footer-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+.figheat-footer-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.figheat-mainnet-logo {
+  height: 24px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+/* Footer mobile-first (screens < 768px) */
+@media (max-width: 768px) {
+  .figheat-footer {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    padding: 12px 16px;
+  }
+  .figheat-footer-left {
+    flex-direction: row;
+    justify-content: center;
+    gap: 12px;
+  }
+  .figheat-footer-right {
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+  }
+  .figheat-footer-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+  }
+  .figheat-footer-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* ===== MAINNET DESIGN BRANDING (legado - mantido para compatibilidade) ===== */
 
 /* Header com Mainnet Design */
 .mainnet-header {
