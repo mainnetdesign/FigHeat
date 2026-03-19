@@ -340,6 +340,8 @@ function App() {
   const analyzeAbModeRef = React.useRef(false);
   const statusContainerRef = React.useRef<HTMLDivElement | null>(null);
   const analyzeWithVotingIgnoreResultRef = React.useRef(false);
+  const analyzeOneInUITimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const analyzeOneInUIIgnoreResultRef = React.useRef(false);
 
   React.useEffect(() => {
     analysisInProgressRef.current = analysisInProgress;
@@ -605,11 +607,29 @@ function App() {
     const endpoint = url.includes("/api/") ? url.replace(/\/api\/.*$/, "/api/cv/analyze") : `${url}/api/cv/analyze`;
     setError(null);
     setStatus(`Sending for analysis (${variant})...`);
+    analyzeOneInUIIgnoreResultRef.current = false;
+    const maxMs = selectedModel === "gemini-3-pro" ? 120000 : 60000; // Flash 60s, Pro 120s
+    const maxSec = maxMs / 1000;
+    if (analyzeOneInUITimeoutRef.current) clearTimeout(analyzeOneInUITimeoutRef.current);
+    analyzeOneInUITimeoutRef.current = setTimeout(() => {
+      analyzeOneInUITimeoutRef.current = null;
+      analyzeOneInUIIgnoreResultRef.current = true;
+      clearAnalyzeProgressInterval();
+      analysisInProgressRef.current = false;
+      setAnalysisInProgress(false);
+      setError(`⏱️ Timeout: analysis took more than ${maxSec}s (${selectedModel === "gemini-3-pro" ? "Pro" : "Flash"}). Try a smaller image or check the API.`);
+      setStatus("Timeout");
+    }, maxMs);
     try {
       const res = await fetchViaPlugin("POST", endpoint, state.bytes ?? undefined, {
         "Content-Type": "application/octet-stream",
         "X-Model": selectedModel,
       });
+      if (analyzeOneInUIIgnoreResultRef.current) return;
+      if (analyzeOneInUITimeoutRef.current) {
+        clearTimeout(analyzeOneInUITimeoutRef.current);
+        analyzeOneInUITimeoutRef.current = null;
+      }
       const data = (res.json ?? {}) as { heatmapPoints?: HeatmapPoint[]; boundingBoxes?: BoundingBox[] };
       const heatmapPoints = Array.isArray(data.heatmapPoints) ? data.heatmapPoints : [];
       const boundingBoxes = Array.isArray(data.boundingBoxes) ? data.boundingBoxes : [];
@@ -630,6 +650,11 @@ function App() {
       if (variant === "A") setA((prev) => ({ ...prev, ...payload }));
       else setB((prev) => ({ ...prev, ...payload }));
     } catch (err: any) {
+      if (analyzeOneInUITimeoutRef.current) {
+        clearTimeout(analyzeOneInUITimeoutRef.current);
+        analyzeOneInUITimeoutRef.current = null;
+      }
+      if (analyzeOneInUIIgnoreResultRef.current) return;
       clearAnalyzeProgressInterval();
       analysisInProgressRef.current = false;
       setAnalysisInProgress(false);
@@ -648,7 +673,8 @@ function App() {
     analyzeStartTimeRef.current = Date.now();
     analyzeAbModeRef.current = isAb;
     const prefix = isAb ? "Analyzing A and B..." : "Analyzing...";
-    const maxS = isAb ? 120 : 90;
+    // Flash: 15–60s | Pro: 60–120s. Exibe máximo esperado por modelo no modo single-image.
+    const maxS = isAb ? 120 : (selectedModel === "gemini-3-pro" ? 120 : 60);
     setStatus(`${prefix} 0s (max ${maxS}s)`);
     analyzeProgressIntervalRef.current = setInterval(() => {
       const elapsed = Math.floor((Date.now() - analyzeStartTimeRef.current) / 1000);
@@ -693,9 +719,10 @@ function App() {
 
     setA((prev) => ({ ...prev, points: [], boxes: [] }));
     setError(null);
+    const maxSingle = selectedModel === "gemini-3-pro" ? 120 : 60;
     flushSync(() => {
       setAnalysisInProgress(true);
-      setStatus("Analyzing... 0s (max 90s)");
+      setStatus(`Analyzing... 0s (max ${maxSingle}s)`);
     });
     startAnalyzeProgressTimer(false);
     void analyzeOneInUI("A");
