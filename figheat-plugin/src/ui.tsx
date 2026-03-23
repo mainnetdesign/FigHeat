@@ -108,9 +108,9 @@ function ResizeHandle() {
     <div
       className="figheat-resize-handle"
       onMouseDown={handleMouseDown}
-      title="Arrastar para redimensionar"
+      title="Drag to resize"
       role="button"
-      aria-label="Redimensionar janela"
+      aria-label="Resize window"
     />
   );
 }
@@ -151,8 +151,11 @@ class PluginErrorBoundary extends React.Component<
   }
 }
 
+const DEFAULT_BASE_URL = "http://localhost:3000";
+
 function App() {
-  const [baseUrl, setBaseUrl] = React.useState("http://localhost:3000");
+  const [baseUrl, setBaseUrl] = React.useState(DEFAULT_BASE_URL);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [status, setStatus] = React.useState("Ready");
   const [error, setError] = React.useState<string | null>(null);
 
@@ -268,32 +271,37 @@ function App() {
   const testConnection = React.useCallback(async () => {
     const url = (baseUrl || "").trim().replace(/\/$/, "");
     if (!url) {
-      setError("Preencha a API Base URL.");
+      setError("Please fill in the API Base URL.");
       return;
     }
     setError(null);
-    setStatus("Testando conexão...");
+    setStatus("Testing connection...");
     try {
       const res = await fetchViaPlugin("GET", `${url}/api/save-vote`);
       if (res.ok) {
-        setStatus("✅ Conectado! API OK.");
+        setStatus("✅ Connected! API OK.");
         setError(null);
         fetchVoteStats();
       } else {
-        setError((res.error as string) || `API retornou ${res.status ?? ""}`);
-        setStatus("Erro");
+        setError((res.error as string) || `API returned ${res.status ?? ""}`);
+        setStatus("Error");
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Falha ao conectar";
+      const msg = e instanceof Error ? e.message : "Failed to connect";
       const isFetchError = msg.includes("fetch") || msg.includes("Failed to fetch") || msg.includes("NetworkError");
       setError(
         isFetchError
-          ? `Não foi possível conectar em ${url}. Confira: (1) Backend rodando? (2) Feche e abra o plugin após alterar o manifest.`
+          ? `Could not connect to ${url}. Check: (1) Is the server running? (2) Close and reopen the plugin after changing the manifest.`
           : msg
       );
-      setStatus("Erro");
+      setStatus("Error");
     }
   }, [baseUrl, fetchViaPlugin, fetchVoteStats]);
+
+  // Load stored API Base URL on mount
+  React.useEffect(() => {
+    parent.postMessage({ pluginMessage: { type: "GET_BASE_URL" } }, "*");
+  }, []);
 
   // Buscar votos ao montar quando há API (todos os modos: Analyze, A/B e Training)
   React.useEffect(() => {
@@ -370,6 +378,11 @@ function App() {
           if (msg.ok) pending.resolve({ ok: true, status: msg.status, json: msg.json, blobBase64: msg.blobBase64 });
           else pending.reject(new Error(msg.error || `Request failed (${msg.status ?? ""})`));
         }
+        return;
+      }
+
+      if (msg.type === "BASE_URL_LOADED") {
+        setBaseUrl(msg.baseUrl || DEFAULT_BASE_URL);
         return;
       }
 
@@ -457,7 +470,7 @@ function App() {
   // Força atualização do canvas quando votingResults muda (após votar)
   React.useEffect(() => {
     if (!votingResults && A.imageBase64) {
-      console.log('votingResults mudou para null, forçando atualização do canvas', {
+      console.log('votingResults changed to null, forcing canvas update', {
         hasImage: !!A.imageBase64,
         pointsCount: A.points.length,
         boxesCount: A.boxes.length
@@ -533,7 +546,7 @@ function App() {
     const imgNaturalH = img.naturalHeight || 0;
 
     if (containerW <= 0 || containerH <= 0 || dispW <= 0 || dispH <= 0 || imgNaturalW <= 0 || imgNaturalH <= 0) {
-      console.warn(`drawOverlay(${variant}): Dimensões inválidas`, {
+      console.warn(`drawOverlay(${variant}): Invalid dimensions`, {
         containerW,
         containerH,
         dispW,
@@ -586,7 +599,7 @@ function App() {
 
       // 🚀 OTIMIZAÇÃO: Usa imagem otimizada no Quick Mode (todos os modos: Analyze, A/B e Training)
       if (quickMode) {
-        setStatus(`Otimizando imagem ${variant}...`);
+        setStatus(`Optimizing image ${variant}...`);
         const optimized = await optimizeImage(file, 1024, 0.85);
         
         const next: Partial<ResultState> = {
@@ -601,15 +614,12 @@ function App() {
         if (variant === "A") setA(prev => ({ ...prev, ...next }));
         else setB(prev => ({ ...prev, ...next }));
 
-        setStatus(`✅ Imagem ${variant} otimizada (${optimized.width}x${optimized.height})`);
+        setStatus(`✅ Image ${variant} optimized (${optimized.width}x${optimized.height})`);
         setError(null);
         return;
       }
 
-      // Modo normal (sem otimização)
-      const buf = await file.arrayBuffer();
-      const u8 = new Uint8Array(buf);
-
+      // Modo normal: se imagem for grande, otimiza para caber no timeout de 60s
       const localBase64 = await new Promise<string>((resolve, reject) => {
         const r = new FileReader();
         r.onload = () => resolve(String(r.result));
@@ -618,20 +628,38 @@ function App() {
       });
 
       const img = await loadImage(localBase64);
+      const maxDim = Math.max(img.naturalWidth, img.naturalHeight);
+      const isLarge = maxDim > 1500 || file.size > 1024 * 1024;
 
-      const next: Partial<ResultState> = {
-        bytes: u8,
-        imageBase64: localBase64,
-        points: [],
-        boxes: [],
-        w: img.naturalWidth || 0,
-        h: img.naturalHeight || 0,
-      };
-
-      if (variant === "A") setA(prev => ({ ...prev, ...next }));
-      else setB(prev => ({ ...prev, ...next }));
-
-      setStatus(`Image ${variant} loaded`);
+      if (isLarge) {
+        setStatus(`Optimizing large image ${variant}...`);
+        const optimized = await optimizeImage(file, 1024, 0.85);
+        const next: Partial<ResultState> = {
+          bytes: optimized.bytes,
+          imageBase64: optimized.base64,
+          points: [],
+          boxes: [],
+          w: optimized.width,
+          h: optimized.height,
+        };
+        if (variant === "A") setA(prev => ({ ...prev, ...next }));
+        else setB(prev => ({ ...prev, ...next }));
+        setStatus(`✅ Image ${variant} optimized (${optimized.width}x${optimized.height})`);
+      } else {
+        const buf = await file.arrayBuffer();
+        const u8 = new Uint8Array(buf);
+        const next: Partial<ResultState> = {
+          bytes: u8,
+          imageBase64: localBase64,
+          points: [],
+          boxes: [],
+          w: img.naturalWidth || 0,
+          h: img.naturalHeight || 0,
+        };
+        if (variant === "A") setA(prev => ({ ...prev, ...next }));
+        else setB(prev => ({ ...prev, ...next }));
+        setStatus(`Image ${variant} loaded`);
+      }
       setError(null);
     } catch (err: any) {
       setError(err.message || "Failed to process image");
@@ -887,7 +915,7 @@ function App() {
       if (analyzeWithVotingIgnoreResultRef.current) return;
       if (err.name === "AbortError") {
         setError("❌ Analysis cancelled.");
-        setStatus("Cancelado");
+        setStatus("Cancelled");
       } else {
         const urlTrim = (baseUrl || "").trim().replace(/\/$/, "");
         const msg = err?.message ?? "";
@@ -1052,7 +1080,7 @@ function App() {
   async function exportSnapshotPng() {
     try {
       setError(null);
-      setStatus("Gerando snapshot...");
+      setStatus("Generating snapshot...");
 
       const makeSingle = async (variant: Variant) => {
         const state = variant === "A" ? A : B;
@@ -1080,7 +1108,7 @@ function App() {
         ctx.drawImage(img, 0, 0, outW, outH);
 
         const scheme = heatmapColorMode === 'auto' ? detectDominantColor(img) : heatmapColorMode;
-        console.log(`🎨 [EXPORT ${variant}] Esquema: ${scheme === 'cool' ? '❄️ AZUL' : '🔥 VERMELHO'}`);
+        console.log(`🎨 [EXPORT ${variant}] Scheme: ${scheme === 'cool' ? '❄️ COOL (blue)' : '🔥 WARM (red)'}`);
         // Export: somente heatmap (sem "TOP ELEMENTS"/boxes)
         drawHeat(ctx, state.points, outW, outH, scheme, heatmapIntensity / 100);
 
@@ -1156,9 +1184,23 @@ function App() {
   return (
     <div className="figheat-app">
       <div className="figheat-top-bar">
-        <div className="figheat-top-bar-cell figheat-top-bar-cell-left figheat-header-brand flex-[0_0_48%] min-w-[240px] max-w-[320px] border-r border-neutral-200 pt-4 pb-7">
-          <img src={vectorLogo} alt="" className="figheat-logo-flame figheat-logo-img" />
-          <span className="figheat-header-title">FigHeat</span>
+        <div className="figheat-top-bar-cell figheat-top-bar-cell-left figheat-header-brand flex-[0_0_48%] min-w-[240px] max-w-[320px] border-r border-neutral-200 pt-4 pb-7 flex items-center justify-between pr-2">
+          <div className="flex items-center gap-2">
+            <img src={vectorLogo} alt="" className="figheat-logo-flame figheat-logo-img" />
+            <span className="figheat-header-title">FigHeat</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((o) => !o)}
+            className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900 transition-colors"
+            title="Settings"
+            aria-label="Open settings"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
         </div>
         <div className="figheat-top-bar-cell figheat-top-bar-cell-right flex-1 min-w-0 flex items-center justify-center pt-4 pb-7">
             {(analysisInProgress || analysisController) ? (
@@ -1193,11 +1235,51 @@ function App() {
               </div>
             ) : (
               <div className="figheat-upload-header-top text-center">
-                Select an image on canva or upload
+                Select an image on canvas or upload
               </div>
             )}
         </div>
       </div>
+
+      {settingsOpen && (
+        <div className="figheat-settings-panel border-b border-neutral-200 p-4 bg-neutral-50">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-neutral-900">Settings</span>
+            <button
+              type="button"
+              onClick={() => {
+                const url = (baseUrl || "").trim().replace(/\/$/, "") || DEFAULT_BASE_URL;
+                setBaseUrl(url);
+                parent.postMessage({ pluginMessage: { type: "SET_BASE_URL", baseUrl: url } }, "*");
+                setSettingsOpen(false);
+              }}
+              className="text-neutral-500 hover:text-neutral-900 text-xs"
+            >
+              Close
+            </button>
+          </div>
+          <label className="text-xs font-medium text-neutral-700 mb-1.5 block">API Base URL</label>
+          <input
+            type="text"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            onBlur={() => {
+              const url = (baseUrl || "").trim().replace(/\/$/, "") || DEFAULT_BASE_URL;
+              setBaseUrl(url);
+              parent.postMessage({ pluginMessage: { type: "SET_BASE_URL", baseUrl: url } }, "*");
+            }}
+            placeholder="http://localhost:3000"
+            className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+          />
+          <button
+            type="button"
+            onClick={testConnection}
+            className="w-full py-2 px-3 text-sm font-medium border border-neutral-300 bg-white rounded-lg hover:bg-neutral-50"
+          >
+            Test Connection
+          </button>
+        </div>
+      )}
 
       <div className="figheat-two-col">
         <div className="figheat-left-panel">
@@ -1303,7 +1385,7 @@ function App() {
           onVote={submitVote}
           onCancel={() => {
             setVotingResults(null);
-            setStatus("Votação cancelada");
+            setStatus("Vote cancelled");
           }}
           canvasARef={canvasVoteARef}
           canvasBRef={canvasVoteBRef}
@@ -1359,7 +1441,7 @@ function App() {
               <span className="statValue">{A.points.length}</span>
             </div>
             <div className="stat">
-              <span className="statLabel">Elementos UI:</span>
+              <span className="statLabel">UI Elements:</span>
               <span className="statValue">{A.boxes.length}</span>
             </div>
           </div>
@@ -1381,7 +1463,10 @@ function App() {
                 aria-expanded={topElementsExpanded}
               >
                 <span>TOP ELEMENTS</span>
-                <span style={{ color: "var(--muted)" }}>{topElementsExpanded ? "▲" : "▼"}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--muted)", fontSize: "11px", fontWeight: 500 }}>
+                  {topElementsExpanded ? "See Less" : "See More"}
+                  <span>{topElementsExpanded ? "▲" : "▼"}</span>
+                </span>
               </button>
 
               {topElementsExpanded && (
@@ -1487,7 +1572,7 @@ function App() {
                 border border-neutral-200 rounded-lg
                 shadow-sm backdrop-blur disabled:opacity-50 disabled:cursor-not-allowed
               "
-              title="Trocar imagem"
+              title="Change image"
             >
               Change image
             </button>

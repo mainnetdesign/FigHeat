@@ -51,7 +51,7 @@ export function InsightsPanel({ insights, onClose }: InsightsPanelProps) {
       </div>
 
       <button className="btnGhost" onClick={onClose}>
-        Fechar Insights
+        Close Insights
       </button>
     </div>
   );

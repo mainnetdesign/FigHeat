@@ -2,6 +2,7 @@
 /// <reference types="@figma/plugin-typings" />
 
 const PLUGIN_SIZE_KEY = "figheat_plugin_size";
+const BASE_URL_KEY = "figheat_base_url";
 const DEFAULT_W = 560;
 const DEFAULT_H = 620;
 const MIN_W = 480;
@@ -116,7 +117,9 @@ type UiToCode =
       body?: string | Uint8Array;
       headers?: Record<string, string>;
     }
-  | { type: "RESIZE"; width: number; height: number };
+  | { type: "RESIZE"; width: number; height: number }
+  | { type: "GET_BASE_URL" }
+  | { type: "SET_BASE_URL"; baseUrl: string };
 
 type CodeToUi =
   | { type: "STATUS"; message: string }
@@ -141,7 +144,8 @@ type CodeToUi =
       json?: unknown;
       blobBase64?: string;
       error?: string;
-    };
+    }
+  | { type: "BASE_URL_LOADED"; baseUrl: string };
 
 function post(msg: CodeToUi) {
   figma.ui.postMessage(msg);
@@ -156,6 +160,15 @@ let currentAnalyzeController: AbortController | null = null;
 
 figma.ui.onmessage = async (msg: UiToCode) => {
   try {
+    if (msg.type === "GET_BASE_URL") {
+      const stored = (await figma.clientStorage.getAsync(BASE_URL_KEY)) as string | undefined;
+      figma.ui.postMessage({ type: "BASE_URL_LOADED", baseUrl: stored || "http://localhost:3000" });
+      return;
+    }
+    if (msg.type === "SET_BASE_URL") {
+      await figma.clientStorage.setAsync(BASE_URL_KEY, (msg.baseUrl || "").trim() || "http://localhost:3000");
+      return;
+    }
     if (msg.type === "RESIZE") {
       const w = Math.round(Math.max(MIN_W, Math.min(MAX_W, msg.width)));
       const h = Math.round(Math.max(MIN_H, Math.min(MAX_H, msg.height)));
@@ -284,12 +297,17 @@ figma.ui.onmessage = async (msg: UiToCode) => {
         });
         if (!res.ok) {
           const text = await res.text().catch(() => "");
+          let errMsg = text || res.statusText;
+          try {
+            const j = JSON.parse(text) as { error?: string };
+            if (typeof j?.error === "string") errMsg = j.error;
+          } catch (_) {}
           figma.ui.postMessage({
             type: "FETCH_PROXY_RESULT",
             id,
             ok: false,
             status: res.status,
-            error: text || res.statusText,
+            error: errMsg,
           });
           return;
         }

@@ -5,6 +5,13 @@
   "main": "dist/code.js",
   "ui": "dist/ui.html",
   "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "menu": [
+    {
+      "name": "FigHeat",
+      "command": "run"
+    }
+  ],
   "networkAccess": {
     "allowedDomains": ["*"],
     "reasoning": "FigHeat connects to the user's API (localhost or hosted) for computer vision heatmap analysis.",

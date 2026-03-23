@@ -60,7 +60,8 @@ export type CodeToUi =
       json?: unknown;
       blobBase64?: string;
       error?: string;
-    };
+    }
+  | { type: "BASE_URL_LOADED"; baseUrl: string };
 
 export type UiToCode =
   | {
@@ -89,7 +90,9 @@ export type UiToCode =
       body?: string | Uint8Array;
       headers?: Record<string, string>;
     }
-  | { type: "RESIZE"; width: number; height: number };
+  | { type: "RESIZE"; width: number; height: number }
+  | { type: "GET_BASE_URL" }
+  | { type: "SET_BASE_URL"; baseUrl: string };
 
 export type ColorScheme = 'warm' | 'cool';
 

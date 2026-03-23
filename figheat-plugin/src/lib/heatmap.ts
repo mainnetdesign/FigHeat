@@ -51,15 +51,16 @@ export function detectDominantColor(imageElement: HTMLImageElement): ColorScheme
     const avgBlue = totalBlue / pixelCount;
 
     const isWarmPage = avgRed > avgBlue + 20;
-    const decision: ColorScheme = isWarmPage ? "cool" : "warm";
+    // Warm page (red tones) → warm heatmap; cool page (blue tones) → cool heatmap
+    const decision: ColorScheme = isWarmPage ? "warm" : "cool";
 
     console.log(
-      `🎨 Detecção: R=${avgRed.toFixed(0)} G=${avgGreen.toFixed(0)} B=${avgBlue.toFixed(0)} → ${decision === "cool" ? "❄️ AZUL" : "🔥 VERMELHO"}`
+      `🎨 Detection: R=${avgRed.toFixed(0)} G=${avgGreen.toFixed(0)} B=${avgBlue.toFixed(0)} → ${decision === "cool" ? "❄️ COOL (blue)" : "🔥 WARM (red)"}`
     );
 
     return decision;
   } catch (err) {
-    console.warn("Erro ao detectar cores:", err);
+    console.warn("Error detecting colors:", err);
     return "warm";
   }
 }
@@ -170,7 +171,7 @@ export function drawHeat(
   globalIntensity: number = 1
 ): void {
   if (!w || !h || w <= 0 || h <= 0) {
-    console.warn("drawHeat: Dimensões inválidas", { w, h });
+    console.warn("drawHeat: Invalid dimensions", { w, h });
     return;
   }
   drawHeatmapBlobs(ctx, points, w, h, scheme, globalIntensity);
@@ -187,7 +188,7 @@ export function drawHeatOnCanvas(
   scheme: ColorScheme
 ): void {
   if (!w || !h || w <= 0 || h <= 0) {
-    console.warn("drawHeatOnCanvas: Dimensões inválidas", { w, h });
+    console.warn("drawHeatOnCanvas: Invalid dimensions", { w, h });
     return;
   }
   drawHeatmapBlobs(ctx, points, w, h, scheme, 1);
