@@ -52,7 +52,7 @@ export function UploadArea({ onFileSelect, accept = "image/png,image/jpeg,image/
     <div
       className="
         relative flex-1 min-h-[160px] flex flex-col items-center justify-center gap-4
-        p-6 border border-dashed border-neutral-200 rounded-sm bg-neutral-50
+        p-6 border border-dashed border-neutral-200 rounded-xl bg-neutral-50
       "
       onDrop={handleDrop}
       onDragOver={handleDragOver}
@@ -75,7 +75,7 @@ export function UploadArea({ onFileSelect, accept = "image/png,image/jpeg,image/
         type="button"
         onClick={handleClick}
         disabled={disabled}
-        className="px-6 py-2.5 text-base font-medium text-neutral-600 bg-white border border-neutral-200 rounded-2xl hover:bg-neutral-100 hover:border-neutral-300 disabled:opacity-50"
+        className="px-6 py-2.5 text-base font-medium text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-100 hover:border-neutral-300 disabled:opacity-50"
       >
         Browse File
       </button>

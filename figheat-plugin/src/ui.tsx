@@ -185,6 +185,8 @@ function App() {
   
   // Estado para hover bidirecional
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
+  // Collapsible para não ocupar espaço demais no "Analysis Summary"
+  const [topElementsExpanded, setTopElementsExpanded] = React.useState(false);
 
   // Estatísticas de votos (Training) — GET /api/save-vote
   type VoteStats = {
@@ -332,6 +334,7 @@ function App() {
   // Refs para inputs de arquivo (limpar valor no reset para permitir novo upload)
   const fileInputARef = React.useRef<HTMLInputElement | null>(null);
   const fileInputBRef = React.useRef<HTMLInputElement | null>(null);
+  const singleImageInputARef = React.useRef<HTMLInputElement | null>(null);
 
   // Refs para loading Analyze/A/B: timer em inglês e não sobrescrever com STATUS do main thread
   const analysisInProgressRef = React.useRef(false);
@@ -342,6 +345,7 @@ function App() {
   const analyzeWithVotingIgnoreResultRef = React.useRef(false);
   const analyzeOneInUITimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const analyzeOneInUIIgnoreResultRef = React.useRef(false);
+  const lastAutoExportSignatureRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     analysisInProgressRef.current = analysisInProgress;
@@ -426,6 +430,30 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [B.imageBase64, B.points, B.boxes, heatmapIntensity]);
 
+  // Auto-export para Figma: quando a análise terminar (single-image),
+  // gera um PNG com heatmap/boxes e envia via pluginMessage.
+  React.useEffect(() => {
+    if (abMode) return; // só quando não for A/B
+    if (analysisInProgress) return;
+    if (error) return;
+    if (!A.imageBase64) return;
+    if (A.points.length === 0 && A.boxes.length === 0) return;
+
+    const signature = `${resetKey}|${A.imageBase64.substring(0, 40)}|${A.points.length}|${A.boxes.length}|${heatmapColorMode}`;
+    if (lastAutoExportSignatureRef.current === signature) return;
+    lastAutoExportSignatureRef.current = signature;
+
+    const t = window.setTimeout(() => {
+      if (abMode) return;
+      if (analysisInProgress) return;
+      if (error) return;
+      void exportSnapshotPng();
+    }, 250);
+
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abMode, analysisInProgress, error, A.imageBase64, A.points.length, A.boxes.length, heatmapColorMode, resetKey]);
+
   // Força atualização do canvas quando votingResults muda (após votar)
   React.useEffect(() => {
     if (!votingResults && A.imageBase64) {
@@ -487,38 +515,75 @@ function App() {
       hasImage: !!state.imageBase64
     });
 
-    let w = img.clientWidth;
-    let h = img.clientHeight;
-    if (w <= 0 || h <= 0) {
-      w = img.naturalWidth || 0;
-      h = img.naturalHeight || 0;
-    }
-    if (w <= 0 || h <= 0) {
-      console.warn(`drawOverlay(${variant}): Dimensões inválidas`);
+    // O canvas é absolute/inset:0 dentro de `.preview`.
+    // Para evitar qualquer diferença de cálculo do `object-fit` (contain/letterbox/auto),
+    // vamos medir o retângulo REAL onde a imagem está renderizada.
+    const canvasRect = canvas.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+
+    const containerW = Math.max(1, canvasRect.width);
+    const containerH = Math.max(1, canvasRect.height);
+
+    const dispW = Math.max(1, imgRect.width);
+    const dispH = Math.max(1, imgRect.height);
+    const offsetX = imgRect.left - canvasRect.left;
+    const offsetY = imgRect.top - canvasRect.top;
+
+    const imgNaturalW = img.naturalWidth || 0;
+    const imgNaturalH = img.naturalHeight || 0;
+
+    if (containerW <= 0 || containerH <= 0 || dispW <= 0 || dispH <= 0 || imgNaturalW <= 0 || imgNaturalH <= 0) {
+      console.warn(`drawOverlay(${variant}): Dimensões inválidas`, {
+        containerW,
+        containerH,
+        dispW,
+        dispH,
+        offsetX,
+        offsetY,
+        imgNaturalW,
+        imgNaturalH,
+      });
       return;
     }
 
-    canvas.width = Math.round(w);
-    canvas.height = Math.round(h);
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    canvas.width = Math.max(1, Math.round(containerW * dpr));
+    canvas.height = Math.max(1, Math.round(containerH * dpr));
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Desenha em coordenadas CSS px (1 unidade = 1px CSS) para casar com getBoundingClientRect().
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, containerW, containerH);
 
-    const scheme = heatmapColorMode === 'auto' ? detectDominantColor(img) : heatmapColorMode;
+    const scheme = heatmapColorMode === "auto" ? detectDominantColor(img) : heatmapColorMode;
     const globalIntensity = heatmapIntensity / 100;
-    drawHeat(ctx, state.points, canvas.width, canvas.height, scheme, globalIntensity);
 
-    const imgW = img.naturalWidth || canvas.width;
-    const imgH = img.naturalHeight || canvas.height;
-    drawBoxesOverlay(ctx, state.boxes, canvas.width, canvas.height, imgW, imgH);
+    // Desenha heatmap/boxes apenas na área efetivamente ocupada pela imagem
+    // (contain), respeitando offsetX/offsetY.
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    drawHeat(ctx, state.points, dispW, dispH, scheme, globalIntensity);
+    drawBoxesOverlay(ctx, state.boxes, dispW, dispH, imgNaturalW, imgNaturalH);
+    ctx.restore();
   }
 
   async function pickFile(variant: Variant, file: File | null) {
     if (!file) return;
 
     try {
+      // Trocou imagem: limpa resultados e insights atuais
+      // (evita o usuário trocar a foto e ficar com UI/overlays de análise anterior).
+      if (analysisController || analysisInProgressRef.current) {
+        cancelAnalysis();
+      }
+      setVotingResults(null);
+      setSelectedInsights(null);
+      setInsightsToShow(null);
+      setTopElementsExpanded(false);
+      setError(null);
+
       // 🚀 OTIMIZAÇÃO: Usa imagem otimizada no Quick Mode (todos os modos: Analyze, A/B e Training)
       if (quickMode) {
         setStatus(`Otimizando imagem ${variant}...`);
@@ -1016,7 +1081,8 @@ function App() {
 
         const scheme = heatmapColorMode === 'auto' ? detectDominantColor(img) : heatmapColorMode;
         console.log(`🎨 [EXPORT ${variant}] Esquema: ${scheme === 'cool' ? '❄️ AZUL' : '🔥 VERMELHO'}`);
-        drawHeat(ctx, state.points, outW, outH, scheme);
+        // Export: somente heatmap (sem "TOP ELEMENTS"/boxes)
+        drawHeat(ctx, state.points, outW, outH, scheme, heatmapIntensity / 100);
 
         return canvas;
       };
@@ -1089,23 +1155,52 @@ function App() {
 
   return (
     <div className="figheat-app">
-      {/* Uma única linha horizontal: header em uma linha, conteúdo em duas colunas */}
-      <div className="flex flex-1 min-h-0 w-full flex-col">
-        {/* Linha de header única (border-bottom contínuo em toda a largura) */}
-        <div className="flex w-full border-b border-neutral-200 flex-shrink-0">
-          <div className="figheat-top-bar-cell figheat-top-bar-cell-left flex flex-[0_0_40%] min-w-[200px] max-w-[320px] items-center gap-2.5 border-r border-neutral-200 pt-4 pb-7">
-            <img src={vectorLogo} alt="" className="figheat-logo-flame figheat-logo-img" />
-            <span className="figheat-header-title">FigHeat</span>
-          </div>
-          <div className="figheat-top-bar-cell figheat-top-bar-cell-right flex flex-1 min-w-0 items-center justify-center pt-4 pb-7">
-            <div className="figheat-upload-header-top">Select an image on canva or upload</div>
-          </div>
+      <div className="figheat-top-bar">
+        <div className="figheat-top-bar-cell figheat-top-bar-cell-left figheat-header-brand flex-[0_0_48%] min-w-[240px] max-w-[320px] border-r border-neutral-200 pt-4 pb-7">
+          <img src={vectorLogo} alt="" className="figheat-logo-flame figheat-logo-img" />
+          <span className="figheat-header-title">FigHeat</span>
         </div>
-        {/* Conteúdo em duas colunas */}
-        <div className="flex flex-1 min-h-0 w-full">
-        {/* Coluna esquerda ~40% */}
-        <div className="flex-[0_0_40%] min-w-[200px] max-w-[320px] flex flex-col border-r border-neutral-200">
-          <div className="p-4 flex flex-col gap-3 flex-1 min-h-0 overflow-auto">
+        <div className="figheat-top-bar-cell figheat-top-bar-cell-right flex-1 min-w-0 flex items-center justify-center pt-4 pb-7">
+            {(analysisInProgress || analysisController) ? (
+              <div className="status-loading">
+                <svg
+                  className="mainnet-loading-svg"
+                  viewBox="0 0 104 103"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M113.223 17.3373V10.3579H116.713C117.053 10.3579 117.393 10.4431 117.734 10.6133C118.081 10.7772 118.368 11.0294 118.595 11.3699C118.828 11.704 118.944 12.1201 118.944 12.6182C118.944 13.1226 118.825 13.5513 118.585 13.9044C118.345 14.2574 118.046 14.5254 117.687 14.7082C117.327 14.891 116.968 14.9825 116.609 14.9825H114.131V13.7814H116.173C116.4 13.7814 116.624 13.6837 116.845 13.4882C117.072 13.2928 117.185 13.0028 117.185 12.6182C117.185 12.2147 117.072 11.9373 116.845 11.786C116.624 11.6347 116.41 11.559 116.202 11.559H114.849V17.3373H113.223ZM117.516 14.0651L119.209 17.3373H117.422L115.795 14.0651H117.516ZM115.899 21.4984C114.853 21.4984 113.872 21.303 112.958 20.9121C112.044 20.5212 111.24 19.979 110.547 19.2855C109.853 18.5919 109.311 17.7881 108.92 16.8739C108.529 15.9597 108.334 14.9793 108.334 13.9327C108.334 12.8861 108.529 11.9058 108.92 10.9916C109.311 10.0774 109.853 9.27353 110.547 8.58001C111.24 7.88649 112.044 7.34428 112.958 6.95338C113.872 6.56249 114.853 6.36704 115.899 6.36704C116.946 6.36704 117.926 6.56249 118.84 6.95338C119.755 7.34428 120.558 7.88649 121.252 8.58001C121.945 9.27353 122.488 10.0774 122.879 10.9916C123.269 11.9058 123.465 12.8861 123.465 13.9327C123.465 14.9793 123.269 15.9597 122.879 16.8739C122.488 17.7881 121.945 18.5919 121.252 19.2855C120.558 19.979 119.755 20.5212 118.84 20.9121C117.926 21.303 116.946 21.4984 115.899 21.4984ZM115.899 19.6259C116.946 19.6259 117.898 19.3706 118.755 18.8599C119.619 18.3429 120.306 17.6557 120.817 16.7982C121.328 15.9345 121.583 14.9793 121.583 13.9327C121.583 12.8861 121.328 11.9341 120.817 11.0767C120.306 10.2129 119.619 9.52572 118.755 9.01503C117.898 8.49804 116.946 8.23955 115.899 8.23955C114.853 8.23955 113.897 8.49804 113.034 9.01503C112.17 9.52572 111.483 10.2129 110.972 11.0767C110.461 11.9341 110.206 12.8861 110.206 13.9327C110.206 14.9793 110.461 15.9345 110.972 16.7982C111.483 17.6557 112.17 18.3429 113.034 18.8599C113.897 19.3706 114.853 19.6259 115.899 19.6259Z"
+                    fill="black"
+                  />
+                  <path
+                    className="loading-bar-1"
+                    d="M46.0626 10L25.6288 10L-9.55385e-06 75.6483L20.4338 75.6483L46.0626 10Z"
+                    fill="black"
+                  />
+                  <path
+                    className="loading-bar-2"
+                    d="M103.942 10L83.5087 10L57.8799 75.6483L78.3137 75.6483L103.942 10Z"
+                    fill="black"
+                  />
+                  <path
+                    className="loading-bar-3"
+                    d="M68.2462 26.3516L47.8124 26.3516L22.1836 91.9998L42.6174 91.9998L68.2462 26.3516Z"
+                    fill="black"
+                  />
+                </svg>
+                <div className="loading-text">{status}</div>
+              </div>
+            ) : (
+              <div className="figheat-upload-header-top text-center">
+                Select an image on canva or upload
+              </div>
+            )}
+        </div>
+      </div>
+
+      <div className="figheat-two-col">
+        <div className="figheat-left-panel">
           <div className="pt-4 pb-4">
             <Dropdown
               label="Page type"
@@ -1149,73 +1244,54 @@ function App() {
           >
             Analyze
           </PrimaryButton>
-          </div>
         </div>
 
-        {/* Coluna direita ~60% */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          <div className="pt-2 px-4 pb-1 flex flex-col gap-2 flex-1 min-h-0 overflow-auto">
-          {!abMode ? (
-            <div key={resetKey} className="relative flex-1 min-h-[160px] flex flex-col">
-              <UploadArea
-                onFileSelect={(file) => pickFile("A", file)}
-                accept="image/png,image/jpeg,image/webp"
-              />
-            </div>
-          ) : (
-            <div className="row2">
-              <div className="drop">
-                <input
-                  key={`${resetKey}-A`}
-                  ref={fileInputARef}
-                  className="file"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={e => pickFile("A", e.target.files?.[0] || null)}
-                />
-                <div className="dropInner">
-                  <div className="dropTitle">Upload A (landing page)</div>
-                  <div className="dropHint">PNG, JPG, WEBP</div>
+        <div className="figheat-right-panel">
+          <div className="figheat-content min-h-0 flex flex-col overflow-auto" key={resetKey}>
+            {!abMode ? (
+              !A.imageBase64 ? (
+                <div key={resetKey} className="relative flex-1 min-h-[160px] flex flex-col">
+                  <UploadArea
+                    onFileSelect={(file) => pickFile("A", file)}
+                    accept="image/png,image/jpeg,image/webp"
+                  />
+                </div>
+              ) : null
+            ) : (
+              <div className="row2">
+                <div className="drop">
+                  <input
+                    key={`${resetKey}-A`}
+                    ref={fileInputARef}
+                    className="file"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={e => pickFile("A", e.target.files?.[0] || null)}
+                  />
+                  <div className="dropInner">
+                    <div className="dropTitle">Upload A (landing page)</div>
+                    <div className="dropHint">PNG, JPG, WEBP</div>
+                  </div>
+                </div>
+                <div className="drop">
+                  <input
+                    key={`${resetKey}-B`}
+                    ref={fileInputBRef}
+                    className="file"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={e => pickFile("B", e.target.files?.[0] || null)}
+                  />
+                  <div className="dropInner">
+                    <div className="dropTitle">Upload B (landing page)</div>
+                    <div className="dropHint">PNG, JPG, WEBP</div>
+                  </div>
                 </div>
               </div>
-              <div className="drop">
-                <input
-                  key={`${resetKey}-B`}
-                  ref={fileInputBRef}
-                  className="file"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={e => pickFile("B", e.target.files?.[0] || null)}
-                />
-                <div className="dropInner">
-                  <div className="dropTitle">Upload B (landing page)</div>
-                  <div className="dropHint">PNG, JPG, WEBP</div>
-                </div>
-              </div>
-            </div>
-          )}
-          </div>
-      <div className="figheat-content min-h-0 flex flex-col overflow-auto" key={resetKey}>
-      {(error || analysisInProgress || analysisController) && (
-        <div
-          ref={statusContainerRef}
-          className={`status ${error ? "statusErr" : ""}`}
-        >
-          {error ? (
-            `Error: ${error}`
-          ) : (status.includes("Enviando") || status.includes("Analyzing")) ? (
-            <div className="status-loading">
-              <svg className="mainnet-loading-svg" viewBox="0 0 104 103" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M113.223 17.3373V10.3579H116.713C117.053 10.3579 117.393 10.4431 117.734 10.6133C118.081 10.7772 118.368 11.0294 118.595 11.3699C118.828 11.704 118.944 12.1201 118.944 12.6182C118.944 13.1226 118.825 13.5513 118.585 13.9044C118.345 14.2574 118.046 14.5254 117.687 14.7082C117.327 14.891 116.968 14.9825 116.609 14.9825H114.131V13.7814H116.173C116.4 13.7814 116.624 13.6837 116.845 13.4882C117.072 13.2928 117.185 13.0028 117.185 12.6182C117.185 12.2147 117.072 11.9373 116.845 11.786C116.624 11.6347 116.41 11.559 116.202 11.559H114.849V17.3373H113.223ZM117.516 14.0651L119.209 17.3373H117.422L115.795 14.0651H117.516ZM115.899 21.4984C114.853 21.4984 113.872 21.303 112.958 20.9121C112.044 20.5212 111.24 19.979 110.547 19.2855C109.853 18.5919 109.311 17.7881 108.92 16.8739C108.529 15.9597 108.334 14.9793 108.334 13.9327C108.334 12.8861 108.529 11.9058 108.92 10.9916C109.311 10.0774 109.853 9.27353 110.547 8.58001C111.24 7.88649 112.044 7.34428 112.958 6.95338C113.872 6.56249 114.853 6.36704 115.899 6.36704C116.946 6.36704 117.926 6.56249 118.84 6.95338C119.755 7.34428 120.558 7.88649 121.252 8.58001C121.945 9.27353 122.488 10.0774 122.879 10.9916C123.269 11.9058 123.465 12.8861 123.465 13.9327C123.465 14.9793 123.269 15.9597 122.879 16.8739C122.488 17.7881 121.945 18.5919 121.252 19.2855C120.558 19.979 119.755 20.5212 118.84 20.9121C117.926 21.303 116.946 21.4984 115.899 21.4984ZM115.899 19.6259C116.946 19.6259 117.898 19.3706 118.755 18.8599C119.619 18.3429 120.306 17.6557 120.817 16.7982C121.328 15.9345 121.583 14.9793 121.583 13.9327C121.583 12.8861 121.328 11.9341 120.817 11.0767C120.306 10.2129 119.619 9.52572 118.755 9.01503C117.898 8.49804 116.946 8.23955 115.899 8.23955C114.853 8.23955 113.897 8.49804 113.034 9.01503C112.17 9.52572 111.483 10.2129 110.972 11.0767C110.461 11.9341 110.206 12.8861 110.206 13.9327C110.206 14.9793 110.461 15.9345 110.972 16.7982C111.483 17.6557 112.17 18.3429 113.034 18.8599C113.897 19.3706 114.853 19.6259 115.899 19.6259Z" fill="black"/>
-                <path className="loading-bar-1" d="M46.0626 10L25.6288 10L-9.55385e-06 75.6483L20.4338 75.6483L46.0626 10Z" fill="black"/>
-                <path className="loading-bar-2" d="M103.942 10L83.5087 10L57.8799 75.6483L78.3137 75.6483L103.942 10Z" fill="black"/>
-                <path className="loading-bar-3" d="M68.2462 26.3516L47.8124 26.3516L22.1836 91.9998L42.6174 91.9998L68.2462 26.3516Z" fill="black"/>
-              </svg>
-              <div className="loading-text">{status}</div>
-            </div>
-          ) : (
-            status
-          )}
+            )}
+      {error && (
+        <div ref={statusContainerRef} className="status statusErr">
+          {`Error: ${error}`}
         </div>
       )}
 
@@ -1289,38 +1365,59 @@ function App() {
           </div>
           {A.boxes.length > 0 && (
             <div className="summaryList">
-              <div className="summaryListTitle">TOP ELEMENTS:</div>
-              {A.boxes
-                .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-                .map((box, originalIndex) => {
-                  // Encontra o índice real no array original
-                  const realIndex = A.boxes.indexOf(box);
-                  const isHovered = hoveredIndex === realIndex;
-                  
-                  return (
-                    <div 
-                      key={realIndex} 
-                      className={`summaryItem ${isHovered ? 'summaryItemHovered' : ''}`}
-                      onMouseEnter={() => setHoveredIndex(realIndex)}
-                      onMouseLeave={() => setHoveredIndex(null)}
-                      style={{
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <div 
-                        className={`summaryItemNumber ${isHovered ? 'summaryItemNumberHovered' : ''}`}
-                      >
-                        {realIndex + 1}
-                      </div>
-                      <div className="summaryItemContent">
-                        <span className="summaryItemLabel">{box.label || "item"}</span>
-                        <span className={`summaryItemConf ${isHovered ? 'summaryItemConfHovered' : ''}`}>
-                          {Math.round((box.confidence || 0) * 100)}%
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+              <button
+                type="button"
+                className="summaryListTitle"
+                onClick={() => setTopElementsExpanded(v => !v)}
+                style={{
+                  cursor: "pointer",
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  userSelect: "none",
+                }}
+                aria-expanded={topElementsExpanded}
+              >
+                <span>TOP ELEMENTS</span>
+                <span style={{ color: "var(--muted)" }}>{topElementsExpanded ? "▲" : "▼"}</span>
+              </button>
+
+              {topElementsExpanded && (
+                <div>
+                  {A.boxes
+                    .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+                    .map((box) => {
+                      const realIndex = A.boxes.indexOf(box);
+                      const isHovered = hoveredIndex === realIndex;
+
+                      return (
+                        <div
+                          key={realIndex}
+                          className={`summaryItem ${isHovered ? "summaryItemHovered" : ""}`}
+                          onMouseEnter={() => setHoveredIndex(realIndex)}
+                          onMouseLeave={() => setHoveredIndex(null)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          <div
+                            className={`summaryItemNumber ${
+                              isHovered ? "summaryItemNumberHovered" : ""
+                            }`}
+                          >
+                            {realIndex + 1}
+                          </div>
+                          <div className="summaryItemContent">
+                            <span className="summaryItemLabel">{box.label || "item"}</span>
+                            <span className={`summaryItemConf ${isHovered ? "summaryItemConfHovered" : ""}`}>
+                              {Math.round((box.confidence || 0) * 100)}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1367,6 +1464,33 @@ function App() {
       {!abMode ? (
         A.imageBase64 ? (
           <div className="preview">
+            <input
+              ref={singleImageInputARef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                // Permite selecionar a mesma imagem novamente.
+                e.currentTarget.value = "";
+                pickFile("A", f);
+              }}
+            />
+            <button
+              type="button"
+              disabled={!!analysisController || analysisInProgress}
+              onClick={() => singleImageInputARef.current?.click()}
+              className="
+                absolute top-2 right-2 z-10
+                px-3 py-1.5 text-xs font-semibold
+                text-neutral-900 bg-white/90
+                border border-neutral-200 rounded-lg
+                shadow-sm backdrop-blur disabled:opacity-50 disabled:cursor-not-allowed
+              "
+              title="Trocar imagem"
+            >
+              Change image
+            </button>
             <img ref={imgARef} src={A.imageBase64} alt="Preview" onLoad={() => drawOverlay("A")} />
             <canvas ref={canvasARef} />
           </div>
@@ -1397,10 +1521,10 @@ function App() {
         </div>
       )}
 
-      </div>
-        </div>
         </div>
       </div>
+
+    </div>
 
       <Footer mainnetLogoSrc={mainnetLogo} />
       <ResizeHandle />
