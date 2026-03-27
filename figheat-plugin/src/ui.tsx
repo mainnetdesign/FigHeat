@@ -46,6 +46,7 @@ import {
   UploadArea,
   PrimaryButton,
   Footer,
+  VerticalRuler,
   LightningIcon,
   BrainIcon,
 } from "./components/ui";
@@ -354,6 +355,33 @@ function App() {
   const analyzeOneInUITimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const analyzeOneInUIIgnoreResultRef = React.useRef(false);
   const lastAutoExportSignatureRef = React.useRef<string | null>(null);
+
+  const headerBarRef = React.useRef<HTMLDivElement | null>(null);
+  const footerWrapRef = React.useRef<HTMLDivElement | null>(null);
+  const [rulerBandHeights, setRulerBandHeights] = React.useState({ top: 92, bottom: 130 });
+
+  const measureRulerBands = React.useCallback(() => {
+    const t = headerBarRef.current?.offsetHeight;
+    const b = footerWrapRef.current?.offsetHeight;
+    setRulerBandHeights({
+      top: typeof t === "number" && t > 0 ? t : 92,
+      bottom: typeof b === "number" && b > 0 ? b : 130,
+    });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    measureRulerBands();
+    const ro = new ResizeObserver(() => measureRulerBands());
+    const hEl = headerBarRef.current;
+    const fEl = footerWrapRef.current;
+    if (hEl) ro.observe(hEl);
+    if (fEl) ro.observe(fEl);
+    window.addEventListener("resize", measureRulerBands);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measureRulerBands);
+    };
+  }, [measureRulerBands, settingsOpen]);
 
   React.useEffect(() => {
     analysisInProgressRef.current = analysisInProgress;
@@ -1259,7 +1287,10 @@ function App() {
 
   return (
     <div className="figheat-app">
-      <div className="figheat-top-bar">
+      <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden">
+        <VerticalRuler topBandPx={rulerBandHeights.top} bottomBandPx={rulerBandHeights.bottom} />
+        <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+      <div ref={headerBarRef} className="figheat-top-bar">
         <div className="figheat-top-bar-cell figheat-top-bar-cell-left figheat-header-brand flex-[0_0_48%] min-w-[240px] max-w-[320px] border-r border-neutral-200 pt-4 pb-7 flex items-center justify-between pr-2">
           <div className="flex items-center gap-2">
             <img src={vectorLogo} alt="" className="figheat-logo-flame figheat-logo-img" />
@@ -1684,10 +1715,13 @@ function App() {
 
         </div>
       </div>
+      </div>
 
-    </div>
-
-      <Footer mainnetLogoSrc={mainnetLogo} />
+      <div ref={footerWrapRef} className="shrink-0">
+        <Footer mainnetLogoSrc={mainnetLogo} />
+      </div>
+        </div>
+      </div>
       <ResizeHandle />
     </div>
   );
