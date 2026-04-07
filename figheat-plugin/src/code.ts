@@ -117,6 +117,10 @@ type UiToCode =
       body?: string | Uint8Array;
       headers?: Record<string, string>;
     }
+  | {
+      type: "CAPTURE_SELECTION";
+      variant: Variant;
+    }
   | { type: "RESIZE"; width: number; height: number }
   | { type: "GET_BASE_URL" }
   | { type: "SET_BASE_URL"; baseUrl: string };
@@ -145,7 +149,15 @@ type CodeToUi =
       blobBase64?: string;
       error?: string;
     }
-  | { type: "BASE_URL_LOADED"; baseUrl: string };
+  | { type: "BASE_URL_LOADED"; baseUrl: string }
+  | {
+      type: "SELECTION_CAPTURED";
+      variant: Variant;
+      bytes: Uint8Array;
+      base64: string;
+      width: number;
+      height: number;
+    };
 
 function post(msg: CodeToUi) {
   figma.ui.postMessage(msg);
@@ -182,6 +194,50 @@ figma.ui.onmessage = async (msg: UiToCode) => {
         currentAnalyzeController.abort();
         currentAnalyzeController = null;
       }
+      return;
+    }
+
+    if (msg.type === "CAPTURE_SELECTION") {
+      const selection = figma.currentPage.selection;
+      if (selection.length === 0) {
+        throw new Error("Selecione uma imagem, frame ou componente no Figma primeiro.");
+      }
+
+      const node = selection[0];
+      
+      // Verifica se o nó pode ser exportado
+      if (!("exportAsync" in node)) {
+        throw new Error("O elemento selecionado não pode ser exportado como imagem.");
+      }
+
+      post({ type: "STATUS", message: "Capturando imagem selecionada..." });
+
+      // Exporta como PNG com qualidade alta
+      const bytes = await (node as SceneNode & { exportAsync: (settings: ExportSettings) => Promise<Uint8Array> }).exportAsync({
+        format: "PNG",
+        constraint: { type: "SCALE", value: 2 }, // 2x para melhor qualidade
+      });
+
+      if (!bytes || bytes.length === 0) {
+        throw new Error("Falha ao capturar a imagem do Figma.");
+      }
+
+      // Pega as dimensões do nó
+      const width = "width" in node ? Math.round((node as SceneNode & { width: number }).width) : 0;
+      const height = "height" in node ? Math.round((node as SceneNode & { height: number }).height) : 0;
+
+      const base64 = bytesToDataUrl(bytes);
+
+      post({
+        type: "SELECTION_CAPTURED",
+        variant: msg.variant,
+        bytes,
+        base64,
+        width,
+        height,
+      });
+
+      figma.notify("✅ Imagem capturada do Figma!");
       return;
     }
 

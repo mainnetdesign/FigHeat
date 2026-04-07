@@ -582,6 +582,41 @@ function App() {
     ctx.restore();
   }
 
+  type CapturedImage = { bytes: Uint8Array; base64: string; width: number; height: number };
+
+  function captureSelection(variant: Variant): Promise<CapturedImage> {
+    return new Promise((resolve, reject) => {
+      setError(null);
+      const captureMsg: UiToCode = { type: "CAPTURE_SELECTION", variant };
+
+      const timeout = setTimeout(() => {
+        window.removeEventListener("message", handler);
+        reject(new Error("Timeout ao capturar seleção do Figma."));
+      }, 8000);
+
+      function handler(event: MessageEvent) {
+        const m = event.data.pluginMessage as CodeToUi;
+        if (!m) return;
+        if (m.type === "SELECTION_CAPTURED" && m.variant === variant) {
+          clearTimeout(timeout);
+          window.removeEventListener("message", handler);
+          // Atualiza o estado React também (para exibição da preview)
+          const payload = { bytes: m.bytes, imageBase64: m.base64, points: [] as HeatmapPoint[], boxes: [] as BoundingBox[], w: m.width, h: m.height };
+          if (variant === "A") setA(prev => ({ ...prev, ...payload }));
+          else setB(prev => ({ ...prev, ...payload }));
+          resolve({ bytes: m.bytes, base64: m.base64, width: m.width, height: m.height });
+        } else if (m.type === "ERROR") {
+          clearTimeout(timeout);
+          window.removeEventListener("message", handler);
+          reject(new Error(m.message));
+        }
+      }
+
+      window.addEventListener("message", handler);
+      parent.postMessage({ pluginMessage: captureMsg }, "*");
+    });
+  }
+
   async function pickFile(variant: Variant, file: File | null) {
     if (!file) return;
 
@@ -689,10 +724,11 @@ function App() {
   }
 
   // Faz o fetch na UI (iframe) para localhost funcionar; o sandbox do Figma às vezes não alcança localhost
-  async function analyzeOneInUI(variant: Variant): Promise<void> {
+  async function analyzeOneInUI(variant: Variant, overrideBytes?: Uint8Array): Promise<void> {
     const state = variant === "A" ? A : B;
+    const bytes = overrideBytes ?? state.bytes ?? null;
     const url = (baseUrl || "").trim().replace(/\/$/, "");
-    if (!url || !state.bytes?.length) {
+    if (!url || !bytes?.length) {
       setError(variant === "A" ? "Upload an image first." : "Upload both images A and B first.");
       setStatus("Error");
       return;
@@ -714,7 +750,7 @@ function App() {
       setStatus("Timeout");
     }, maxMs);
     try {
-      const res = await fetchViaPlugin("POST", endpoint, state.bytes ?? undefined, {
+      const res = await fetchViaPlugin("POST", endpoint, bytes ?? undefined, {
         "Content-Type": "application/octet-stream",
         "X-Model": selectedModel,
       });
@@ -775,18 +811,41 @@ function App() {
     }, 1000);
   }
 
-  function analyze() {
+  async function analyze() {
+    if (!baseUrl?.trim()) {
+      setError("Please fill in the API Base URL.");
+      setStatus("Error");
+      return;
+    }
+
     if (abMode) {
-      if (!A.bytes || !B.bytes) {
-        setError("Upload both images A and B first.");
-        setStatus("Error");
-        return;
+      let bytesA = A.bytes;
+      let bytesB = B.bytes;
+
+      if (!bytesA) {
+        try {
+          setStatus("📸 Capturando seleção para A...");
+          const captured = await captureSelection("A");
+          bytesA = captured.bytes;
+        } catch (err: any) {
+          setError(err.message || "Selecione algo no Figma ou faça upload de A.");
+          setStatus("Error");
+          return;
+        }
       }
-      if (!baseUrl?.trim()) {
-        setError("Please fill in the API Base URL.");
-        setStatus("Error");
-        return;
+
+      if (!bytesB) {
+        try {
+          setStatus("📸 Capturando seleção para B...");
+          const captured = await captureSelection("B");
+          bytesB = captured.bytes;
+        } catch (err: any) {
+          setError(err.message || "Selecione algo no Figma ou faça upload de B.");
+          setStatus("Error");
+          return;
+        }
       }
+
       setA((prev) => ({ ...prev, points: [], boxes: [] }));
       setB((prev) => ({ ...prev, points: [], boxes: [] }));
       setError(null);
@@ -795,19 +854,22 @@ function App() {
         setStatus("Analyzing A and B... 0s (max 120s)");
       });
       startAnalyzeProgressTimer(true);
-      void analyzeOneInUI("A").then(() => analyzeOneInUI("B"));
+      void analyzeOneInUI("A", bytesA).then(() => analyzeOneInUI("B", bytesB!));
       return;
     }
 
-    if (!A.bytes) {
-      setError("Upload an image first.");
-      setStatus("Error");
-      return;
-    }
-    if (!baseUrl?.trim()) {
-      setError("Please fill in the API Base URL.");
-      setStatus("Error");
-      return;
+    // Modo single: captura se não tiver imagem
+    let bytesA = A.bytes;
+    if (!bytesA) {
+      try {
+        setStatus("📸 Capturando seleção do Figma...");
+        const captured = await captureSelection("A");
+        bytesA = captured.bytes;
+      } catch (err: any) {
+        setError(err.message || "Selecione algo no Figma ou faça upload de uma imagem.");
+        setStatus("Error");
+        return;
+      }
     }
 
     setA((prev) => ({ ...prev, points: [], boxes: [] }));
@@ -818,14 +880,28 @@ function App() {
       setStatus(`Analyzing... 0s (max ${maxSingle}s)`);
     });
     startAnalyzeProgressTimer(false);
-    void analyzeOneInUI("A");
+    void analyzeOneInUI("A", bytesA);
   }
 
   async function analyzeWithVoting() {
-    if (!A.bytes || !baseUrl) {
-      setError("Upload an image first.");
+    if (!baseUrl) {
+      setError("Please fill in the API Base URL.");
       setStatus("Error");
       return;
+    }
+
+    // Captura automaticamente se não tiver imagem
+    let bytesForVoting = A.bytes;
+    if (!bytesForVoting) {
+      try {
+        setStatus("📸 Capturando seleção do Figma...");
+        const captured = await captureSelection("A");
+        bytesForVoting = captured.bytes;
+      } catch (err: any) {
+        setError(err.message || "Selecione algo no Figma ou faça upload de uma imagem.");
+        setStatus("Error");
+        return;
+      }
     }
 
     setError(null);
@@ -837,7 +913,7 @@ function App() {
     const startTime = Date.now();
     
     // Mostra tamanho da imagem no modo Quick
-    const sizeKB = Math.round(A.bytes.length / 1024);
+    const sizeKB = A.bytes ? Math.round(A.bytes.length / 1024) : 0;
     const modeText = quickMode ? "⚡ Quick" : "🔥 Full";
     
     // 🔥 NOVO: Timeout dinâmico baseado no modelo
@@ -873,7 +949,7 @@ function App() {
     }, 1000);
 
     try {
-      const response = await fetchViaPlugin("POST", url, A.bytes ?? undefined, {
+      const response = await fetchViaPlugin("POST", url, bytesForVoting ?? undefined, {
         "Content-Type": "application/octet-stream",
         "X-Model": selectedModel,
       });

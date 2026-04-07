@@ -61,7 +61,15 @@ export type CodeToUi =
       blobBase64?: string;
       error?: string;
     }
-  | { type: "BASE_URL_LOADED"; baseUrl: string };
+  | { type: "BASE_URL_LOADED"; baseUrl: string }
+  | {
+      type: "SELECTION_CAPTURED";
+      variant: Variant;
+      bytes: Uint8Array;
+      base64: string;
+      width: number;
+      height: number;
+    };
 
 export type UiToCode =
   | {
@@ -90,6 +98,11 @@ export type UiToCode =
       body?: string | Uint8Array;
       headers?: Record<string, string>;
     }
+  | {
+      type: "CAPTURE_SELECTION";
+      variant: Variant;
+    }
+  | { type: "CANCEL_ANALYSIS" }
   | { type: "RESIZE"; width: number; height: number }
   | { type: "GET_BASE_URL" }
   | { type: "SET_BASE_URL"; baseUrl: string };
