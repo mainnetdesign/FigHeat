@@ -51,7 +51,8 @@ html, body {
   border-radius: 0 !important;
 }
 
-/* Resize handle - canto inferior direito (arrastar para redimensionar) */
+/* Resize handle - canto inferior direito (arrastar para redimensionar).
+   Sem borda visível: o quadrado cinza confundia com o footer (feedback supervisão). */
 .figheat-resize-handle {
   position: fixed;
   bottom: 0;
@@ -60,12 +61,12 @@ html, body {
   height: 20px;
   cursor: nwse-resize;
   z-index: 9999;
-  border-top: 2px solid var(--stroke);
-  border-left: 2px solid var(--stroke);
-  border-radius: 4px 0 0 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 .figheat-resize-handle:hover {
-  border-color: var(--muted-soft);
+  background: transparent;
 }
 
 .wrap {
@@ -84,6 +85,7 @@ html, body {
   width: 100%;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
   background: var(--bg);
   border-top: 1px solid var(--stroke);
   border-bottom: 1px solid var(--stroke);
@@ -92,21 +94,44 @@ html, body {
   flex: 0 0 48%;
   min-width: 240px;
   max-width: 320px;
+  min-height: 0;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   background: var(--bg);
   border-right: 1px solid var(--stroke);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Analyze: gruda no fundo da coluna visível, com fundo opaco — evita vazar por cima do footer */
+.figheat-left-primary-slot {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+  padding-top: 8px;
+  flex-shrink: 0;
+  background: var(--bg);
+  box-shadow: 0 -8px 0 0 var(--bg);
+}
+
+.figheat-footer-slot {
+  position: relative;
+  z-index: 3;
+  background: var(--bg);
 }
 .figheat-right-panel {
   flex: 1;
   min-width: 180px;
+  min-height: 0;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   background: var(--bg);
+  overflow: hidden;
 }
 /* Top bar - structured (também usado nas células quando a linha vertical sobe) */
 .figheat-top-bar {
@@ -201,7 +226,7 @@ img.figheat-logo-img {
   padding: 22px;
   border: 1px dashed var(--stroke);
   background: var(--card);
-  border-radius: 12px;
+  border-radius: 0;
 }
 .figheat-cloud-icon {
   font-size: 32px;
@@ -218,7 +243,8 @@ img.figheat-logo-img {
   padding: 0 16px 16px;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--bg);
 }
 
@@ -400,7 +426,7 @@ img.figheat-logo-img {
 .drop {
   position: relative;
   border: 1px dashed var(--stroke);
-  border-radius: var(--radius-10);
+  border-radius: 0;
   background: var(--card);
   overflow: hidden;
 }
@@ -491,6 +517,17 @@ img.figheat-logo-img {
   color: #b91c1c;
   border-color: rgba(185, 28, 28, 0.25);
   background: rgba(185, 28, 28, 0.06);
+  border-radius: 0;
+}
+
+/* Espaço entre mensagem de erro e preview; cantos quadrados herdados de .statusErr */
+.figheat-error-banner {
+  margin-bottom: 16px;
+}
+
+/* Linha superior do footer mais leve (supervisão: afinar) — mesmo tom de --stroke (#e1e4ea), menor contraste */
+.figheat-plugin-footer {
+  border-top: 1px solid rgba(225, 228, 234, 0.55);
 }
 
 .rowPageType {
@@ -543,8 +580,14 @@ img.figheat-logo-img {
   box-shadow: var(--shadow);
 }
 
+/* Zona de upload (tracejado): cantos quadrados — reforço sobre qualquer cascade */
+.figheat-upload-dropzone {
+  border-radius: 0 !important;
+}
+
 .preview img {
-  display: block;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§idth: 100%;
+  display: block;
+  width: 100%;
   height: auto;
   object-fit: contain;
   object-position: center;
@@ -1555,7 +1598,7 @@ img.figheat-logo-img {
 .figheat-drop {
   background: #f7f7f7;
   border: 1px dashed var(--stroke);
-  border-radius: var(--radius-10);
+  border-radius: 0;
   padding: 32px;
   text-align: center;
   position: relative;

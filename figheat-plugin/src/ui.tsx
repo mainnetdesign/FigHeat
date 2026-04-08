@@ -154,6 +154,36 @@ class PluginErrorBoundary extends React.Component<
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
 
+/** Maior lado da imagem enviada à API — Flash: mais leve; Pro: mais detalhe */
+const OPTIMIZE_MAX_FLASH = 1024;
+const OPTIMIZE_MAX_PRO = 1600;
+
+function optimizeMaxForModel(model: "gemini-2.0-flash" | "gemini-3-pro"): number {
+  return model === "gemini-3-pro" ? OPTIMIZE_MAX_PRO : OPTIMIZE_MAX_FLASH;
+}
+
+const FLASH_RECOVERY_HINT_EN =
+  "If you're using Flash, try a simpler image or switch to Pro for more detail.";
+
+/** Appends recovery hint for Flash users on timeout / unexpected-format errors (display only). */
+function formatAnalysisErrorForDisplay(
+  message: string,
+  model: "gemini-2.0-flash" | "gemini-3-pro"
+): string {
+  if (model !== "gemini-2.0-flash") return message;
+  if (message.includes(FLASH_RECOVERY_HINT_EN)) return message;
+  const isTimeout =
+    /\btimeout\b/i.test(message) ||
+    message.includes("took more than") ||
+    message.includes("⏱️");
+  const isFormat =
+    /unexpected format/i.test(message) ||
+    /could not parse/i.test(message) ||
+    /No object generated/i.test(message);
+  if (!isTimeout && !isFormat) return message;
+  return `${message}\n\n${FLASH_RECOVERY_HINT_EN}`;
+}
+
 function App() {
   const [baseUrl, setBaseUrl] = React.useState(DEFAULT_BASE_URL);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -364,8 +394,8 @@ function App() {
     const t = headerBarRef.current?.offsetHeight;
     const b = footerWrapRef.current?.offsetHeight;
     setRulerBandHeights({
-      top: typeof t === "number" && t > 0 ? t : 92,
-      bottom: typeof b === "number" && b > 0 ? b : 130,
+      top: typeof t === "number" && t > 0 ? Math.round(t) : 92,
+      bottom: typeof b === "number" && b > 0 ? Math.round(b) : 130,
     });
   }, []);
 
@@ -663,7 +693,7 @@ function App() {
       // 🚀 OTIMIZAÇÃO: Usa imagem otimizada no Quick Mode (todos os modos: Analyze, A/B e Training)
       if (quickMode) {
         setStatus(`Optimizing image ${variant}...`);
-        const optimized = await optimizeImage(file, 1024, 0.85);
+        const optimized = await optimizeImage(file, optimizeMaxForModel(selectedModel), 0.85);
         
         const next: Partial<ResultState> = {
           bytes: optimized.bytes,
@@ -692,11 +722,12 @@ function App() {
 
       const img = await loadImage(localBase64);
       const maxDim = Math.max(img.naturalWidth, img.naturalHeight);
-      const isLarge = maxDim > 1500 || file.size > 1024 * 1024;
+      const cap = optimizeMaxForModel(selectedModel);
+      const isLarge = maxDim > Math.max(1500, cap) || file.size > 1024 * 1024;
 
       if (isLarge) {
         setStatus(`Optimizing large image ${variant}...`);
-        const optimized = await optimizeImage(file, 1024, 0.85);
+        const optimized = await optimizeImage(file, cap, 0.85);
         const next: Partial<ResultState> = {
           bytes: optimized.bytes,
           imageBase64: optimized.base64,
@@ -1291,7 +1322,7 @@ function App() {
         <VerticalRuler topBandPx={rulerBandHeights.top} bottomBandPx={rulerBandHeights.bottom} />
         <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
       <div ref={headerBarRef} className="figheat-top-bar">
-        <div className="figheat-top-bar-cell figheat-top-bar-cell-left figheat-header-brand flex-[0_0_48%] min-w-[240px] max-w-[320px] border-r border-neutral-200 pt-4 pb-7 flex items-center justify-between pr-2">
+        <div className="figheat-top-bar-cell figheat-top-bar-cell-left figheat-header-brand flex-[0_0_48%] min-w-[240px] max-w-[320px] border-r border-[var(--stroke)] pt-4 pb-7 flex items-center justify-between pr-2">
           <div className="flex items-center gap-2">
             <img src={vectorLogo} alt="" className="figheat-logo-flame figheat-logo-img" />
             <span className="figheat-header-title">FigHeat</span>
@@ -1400,6 +1431,9 @@ function App() {
           </div>
           <div>
             <label className="text-sm font-medium text-neutral-900 mb-2 block">AI Model</label>
+            <p className="text-[11px] leading-snug text-neutral-500 mb-2 -mt-1">
+              Flash sends up to ~1024 px on the long side; Pro up to ~1600 px.
+            </p>
             <div className="flex flex-col gap-2">
               <ModelCard
                 icon={<LightningIcon />}
@@ -1426,13 +1460,14 @@ function App() {
               ❌ Cancel
             </button>
           )}
-          <div className="flex-1 min-h-2 max-h-4" />
-          <PrimaryButton
-            onClick={trainingMode && !abMode ? analyzeWithVoting : analyze}
-            disabled={!!analysisController || analysisInProgress}
-          >
-            Analyze
-          </PrimaryButton>
+          <div className="figheat-left-primary-slot">
+            <PrimaryButton
+              onClick={trainingMode && !abMode ? analyzeWithVoting : analyze}
+              disabled={!!analysisController || analysisInProgress}
+            >
+              Analyze
+            </PrimaryButton>
+          </div>
         </div>
 
         <div className="figheat-right-panel">
@@ -1479,8 +1514,11 @@ function App() {
               </div>
             )}
       {error && (
-        <div ref={statusContainerRef} className="status statusErr">
-          {`Error: ${error}`}
+        <div
+          ref={statusContainerRef}
+          className="status statusErr figheat-error-banner whitespace-pre-line"
+        >
+          {`Error: ${formatAnalysisErrorForDisplay(error, selectedModel)}`}
         </div>
       )}
 
@@ -1676,7 +1714,7 @@ function App() {
                 absolute top-2 right-2 z-10
                 px-3 py-1.5 text-xs font-semibold
                 text-neutral-900 bg-white/90
-                border border-neutral-200 rounded-lg
+                border border-neutral-200 rounded-none
                 shadow-sm backdrop-blur disabled:opacity-50 disabled:cursor-not-allowed
               "
               title="Change image"
@@ -1717,7 +1755,7 @@ function App() {
       </div>
       </div>
 
-      <div ref={footerWrapRef} className="shrink-0">
+      <div ref={footerWrapRef} className="figheat-footer-slot shrink-0">
         <Footer mainnetLogoSrc={mainnetLogo} />
       </div>
         </div>

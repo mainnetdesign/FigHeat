@@ -14,11 +14,10 @@ export function PrimaryButton({ children, onClick, disabled, fullWidth = true }:
       onClick={onClick}
       disabled={disabled}
       className={`
-        py-3 px-4 font-medium text-sm text-white
-        bg-gradient-to-b from-neutral-900 to-neutral-800
-        rounded-xl shadow-md
-        border-0
-        cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
+        py-3 px-4 font-medium text-sm text-white rounded-none shadow-md border-0
+        ${disabled
+          ? "bg-neutral-600 cursor-not-allowed"
+          : "cursor-pointer bg-gradient-to-b from-neutral-900 to-neutral-800"}
         ${fullWidth ? "w-full" : ""}
       `}
     >

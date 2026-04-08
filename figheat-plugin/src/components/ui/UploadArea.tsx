@@ -51,8 +51,9 @@ export function UploadArea({ onFileSelect, accept = "image/png,image/jpeg,image/
   return (
     <div
       className="
+        figheat-upload-dropzone
         relative flex-1 min-h-[160px] flex flex-col items-center justify-center gap-4
-        p-6 border border-dashed border-neutral-200 rounded-xl bg-neutral-50
+        p-6 border border-dashed border-neutral-200 !rounded-none bg-neutral-50
       "
       onDrop={handleDrop}
       onDragOver={handleDragOver}

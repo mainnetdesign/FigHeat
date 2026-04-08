@@ -26,9 +26,9 @@ export function Footer({ mainnetLogoSrc }: FooterProps) {
   return (
     <footer
       className="
+        figheat-plugin-footer
         flex flex-row items-center justify-between gap-3
         py-3 px-4 pr-7
-        border-t border-neutral-200
         text-xs font-normal text-neutral-900
       "
     >
@@ -39,7 +39,7 @@ export function Footer({ mainnetLogoSrc }: FooterProps) {
           target="_blank"
           rel="noopener noreferrer"
           title="Instagram"
-          className="flex items-center justify-center w-7 h-7 text-neutral-900 hover:opacity-80"
+          className="flex items-center justify-center w-7 h-7 rounded-full text-neutral-900 hover:opacity-80 hover:bg-neutral-100"
         >
           <InstagramIcon />
         </a>
@@ -48,7 +48,7 @@ export function Footer({ mainnetLogoSrc }: FooterProps) {
           target="_blank"
           rel="noopener noreferrer"
           title="LinkedIn"
-          className="flex items-center justify-center w-7 h-7 text-neutral-900 hover:opacity-80"
+          className="flex items-center justify-center w-7 h-7 rounded-full text-neutral-900 hover:opacity-80 hover:bg-neutral-100"
         >
           <LinkedInIcon />
         </a>
@@ -57,7 +57,7 @@ export function Footer({ mainnetLogoSrc }: FooterProps) {
           target="_blank"
           rel="noopener noreferrer"
           title="X"
-          className="flex items-center justify-center w-7 h-7 text-neutral-900 hover:opacity-80"
+          className="flex items-center justify-center w-7 h-7 rounded-full text-neutral-900 hover:opacity-80 hover:bg-neutral-100"
         >
           <XIcon />
         </a>

@@ -15,7 +15,7 @@ export function ModelCard({ icon, title, description, selected, onClick }: Model
       onClick={onClick}
       className={`
         w-full flex items-center gap-3 px-4 py-3 text-left
-        border rounded-sm transition-colors
+        border rounded-lg transition-colors
         ${selected
           ? "border-neutral-900 bg-white"
           : "border-neutral-200 bg-white hover:border-neutral-400"
@@ -30,9 +30,10 @@ export function ModelCard({ icon, title, description, selected, onClick }: Model
         <div className="text-xs text-neutral-500">{description}</div>
       </div>
       <div
+        aria-hidden
         className={`
-          w-3 h-3 rounded-full border-2 flex-shrink-0
-          ${selected ? "border-neutral-900 bg-neutral-900" : "border-neutral-200"}
+          w-4 h-4 rounded-full flex-shrink-0 box-border bg-white
+          ${selected ? "border-[3px] border-neutral-900" : "border-2 border-neutral-200"}
         `}
       />
     </button>

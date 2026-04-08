@@ -1,0 +1,13 @@
+{
+  "name": "figheat",
+  "private": true,
+  "description": "FigHeat — use npm run dev:api ou dev:plugin na raiz do repositório",
+  "scripts": {
+    "dev": "npm run dev:api",
+    "dev:api": "npm --prefix figheat-api run dev",
+    "dev:plugin": "npm --prefix figheat-plugin run dev",
+    "build:api": "npm --prefix figheat-api run build",
+    "build:plugin": "npm --prefix figheat-plugin run build",
+    "build": "npm run build:plugin && npm run build:api"
+  }
+}
