@@ -11,6 +11,37 @@ export function clamp01(n: number): number {
 }
 
 /**
+ * Converte pontos do heatmap para escala 0–100 usada em drawHeatmapBlobs.
+ * O schema da API pede 0–100, mas modelos às vezes devolvem 0–1 ou pixels.
+ */
+export function normalizeHeatmapPointsToPercent(
+  points: HeatmapPoint[],
+  imgNaturalW?: number,
+  imgNaturalH?: number
+): HeatmapPoint[] {
+  if (!points.length) return points;
+  const maxX = Math.max(...points.map((p) => p.x));
+  const maxY = Math.max(...points.map((p) => p.y));
+  if (maxX <= 1.001 && maxY <= 1.001) {
+    return points.map((p) => ({
+      ...p,
+      x: p.x * 100,
+      y: p.y * 100,
+    }));
+  }
+  const w = imgNaturalW ?? 0;
+  const h = imgNaturalH ?? 0;
+  if (w > 0 && h > 0 && (maxX > 100 || maxY > 100)) {
+    return points.map((p) => ({
+      ...p,
+      x: Math.max(0, Math.min(100, (p.x / w) * 100)),
+      y: Math.max(0, Math.min(100, (p.y / h) * 100)),
+    }));
+  }
+  return points;
+}
+
+/**
  * Detecta cores predominantes da imagem para escolher esquema de heatmap.
  */
 export function detectDominantColor(imageElement: HTMLImageElement): ColorScheme {
@@ -168,13 +199,16 @@ export function drawHeat(
   w: number,
   h: number,
   scheme: ColorScheme,
-  globalIntensity: number = 1
+  globalIntensity: number = 1,
+  imgNaturalW?: number,
+  imgNaturalH?: number
 ): void {
   if (!w || !h || w <= 0 || h <= 0) {
     console.warn("drawHeat: Invalid dimensions", { w, h });
     return;
   }
-  drawHeatmapBlobs(ctx, points, w, h, scheme, globalIntensity);
+  const pts = normalizeHeatmapPointsToPercent(points, imgNaturalW, imgNaturalH);
+  drawHeatmapBlobs(ctx, pts, w, h, scheme, globalIntensity);
 }
 
 /**
@@ -185,13 +219,16 @@ export function drawHeatOnCanvas(
   points: HeatmapPoint[],
   w: number,
   h: number,
-  scheme: ColorScheme
+  scheme: ColorScheme,
+  imgNaturalW?: number,
+  imgNaturalH?: number
 ): void {
   if (!w || !h || w <= 0 || h <= 0) {
     console.warn("drawHeatOnCanvas: Invalid dimensions", { w, h });
     return;
   }
-  drawHeatmapBlobs(ctx, points, w, h, scheme, 1);
+  const pts = normalizeHeatmapPointsToPercent(points, imgNaturalW, imgNaturalH);
+  drawHeatmapBlobs(ctx, pts, w, h, scheme, 1);
 }
 
 /**

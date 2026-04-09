@@ -89,7 +89,7 @@ export function VotingPanel({
 
                 const schemeA = schemeForImg(img);
                 const points = votingResults.optionA?.heatmapPoints ?? [];
-                drawHeatOnCanvas(ctx, points, canvas.width, canvas.height, schemeA);
+                drawHeatOnCanvas(ctx, points, canvas.width, canvas.height, schemeA, img.naturalWidth, img.naturalHeight);
                 drawBoxes(ctx, votingResults.optionA?.boundingBoxes ?? [], canvas.width, canvas.height);
               }}
             />
@@ -154,7 +154,7 @@ export function VotingPanel({
 
                 const schemeB = schemeForImg(img);
                 const points = votingResults.optionB?.heatmapPoints ?? [];
-                drawHeatOnCanvas(ctx, points, canvas.width, canvas.height, schemeB);
+                drawHeatOnCanvas(ctx, points, canvas.width, canvas.height, schemeB, img.naturalWidth, img.naturalHeight);
                 drawBoxes(ctx, votingResults.optionB?.boundingBoxes ?? [], canvas.width, canvas.height);
               }}
             />

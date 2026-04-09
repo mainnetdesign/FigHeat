@@ -16,6 +16,8 @@
   --radius-8: 8px;
   --radius-10: 10px;
   --radius-full: 9999px;
+  /* Header / footer / régua: mesma espessura e leveza da linha do footer */
+  --hairline-divider: 1px solid rgba(225, 228, 234, 0.55);
 }
 
 * { box-sizing: border-box; }
@@ -87,8 +89,8 @@ html, body {
   min-height: 0;
   overflow: hidden;
   background: var(--bg);
-  border-top: 1px solid var(--stroke);
-  border-bottom: 1px solid var(--stroke);
+  border-top: none;
+  border-bottom: var(--hairline-divider);
 }
 .figheat-left-panel {
   flex: 0 0 48%;
@@ -140,7 +142,7 @@ html, body {
   justify-content: flex-start;
   padding: 0;
   background: var(--bg);
-  border-bottom: 1px solid var(--stroke);
+  border-bottom: var(--hairline-divider);
   flex-shrink: 0;
   gap: 16px;
 }
@@ -525,9 +527,17 @@ img.figheat-logo-img {
   margin-bottom: 16px;
 }
 
-/* Linha superior do footer mais leve (supervisão: afinar) — mesmo tom de --stroke (#e1e4ea), menor contraste */
+/* Linha superior do footer — alinhada ao header (--hairline-divider) */
 .figheat-plugin-footer {
-  border-top: 1px solid rgba(225, 228, 234, 0.55);
+  border-top: var(--hairline-divider);
+}
+
+/* Régua: linha sob o header / sobre o footer = mesma hairline */
+.figheat-ruler-band-b {
+  border-bottom: var(--hairline-divider);
+}
+.figheat-ruler-band-t {
+  border-top: var(--hairline-divider);
 }
 
 .rowPageType {
@@ -591,6 +601,8 @@ img.figheat-logo-img {
   height: auto;
   object-fit: contain;
   object-position: center;
+  position: relative;
+  z-index: 1;
 }
 
 .preview canvas {
@@ -599,6 +611,7 @@ img.figheat-logo-img {
   width: 100%;
   height: 100%;
   pointer-events: none;
+  z-index: 2;
 }
 
 .panel {
@@ -1501,7 +1514,8 @@ img.figheat-logo-img {
   max-height: 400px;
   overflow-y: auto;
   overflow-x: visible;
-  padding: 4px;
+  /* Sem padding-top: evita faixa onde o scroll “vaza” acima do cabeçalho sticky */
+  padding: 0 4px 4px;
 }
 
 /* Custom Scrollbar */
@@ -1530,8 +1544,18 @@ img.figheat-logo-img {
   text-transform: uppercase;
   letter-spacing: 2px;
   margin-bottom: 12px;
-  padding-bottom: 8px;
+  padding: 4px 0 8px;
+  border: none;
   border-bottom: 1px solid var(--stroke);
+  /* Permanece visível ao rolar a lista de Top Elements */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--bg);
+  background-clip: padding-box;
+  /* Garante fundo opaco em <button> (alguns UAs usam transparent) */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 /* ===== FIGHEAT NEW DESIGN (Figma Pluginsnnet) ===== */

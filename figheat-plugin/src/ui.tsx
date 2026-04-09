@@ -165,22 +165,31 @@ function optimizeMaxForModel(model: "gemini-2.0-flash" | "gemini-3-pro"): number
 const FLASH_RECOVERY_HINT_EN =
   "If you're using Flash, try a simpler image or switch to Pro for more detail.";
 
-/** Appends recovery hint for Flash users on timeout / unexpected-format errors (display only). */
+/** Uma linha só no Flash para formato inesperado — evita segundo parágrafo redundante. */
+const FLASH_FORMAT_SINGLE_EN =
+  "Gemini returned an unexpected format. Try a simpler layout, a smaller image, or switch to Pro if the problem persists.";
+
+/** Ajusta texto de erro para o utilizador (Flash: timeout com dica extra; formato: mensagem única). */
 function formatAnalysisErrorForDisplay(
   message: string,
   model: "gemini-2.0-flash" | "gemini-3-pro"
 ): string {
   if (model !== "gemini-2.0-flash") return message;
+
+  const isFormat =
+    /unexpected format/i.test(message) ||
+    /could not parse/i.test(message) ||
+    /No object generated/i.test(message);
+  if (isFormat) {
+    return FLASH_FORMAT_SINGLE_EN;
+  }
+
   if (message.includes(FLASH_RECOVERY_HINT_EN)) return message;
   const isTimeout =
     /\btimeout\b/i.test(message) ||
     message.includes("took more than") ||
     message.includes("⏱️");
-  const isFormat =
-    /unexpected format/i.test(message) ||
-    /could not parse/i.test(message) ||
-    /No object generated/i.test(message);
-  if (!isTimeout && !isFormat) return message;
+  if (!isTimeout) return message;
   return `${message}\n\n${FLASH_RECOVERY_HINT_EN}`;
 }
 
@@ -192,7 +201,7 @@ function App() {
 
   const [abMode, setAbMode] = React.useState(false);
   const [heatmapIntensity] = React.useState(100); // Fixo em 100% (intensidade total)
-  const [heatmapColorMode, setHeatmapColorMode] = React.useState<HeatmapColorMode>('auto'); // Laranja / Azul / Auto
+  const [heatmapColorMode, setHeatmapColorMode] = React.useState<HeatmapColorMode>('warm'); // Padrão: laranja; auto/cool se exposto na UI
   
   // Seletor de modelo
   const [selectedModel, setSelectedModel] = React.useState<'gemini-2.0-flash' | 'gemini-3-pro'>('gemini-2.0-flash');
@@ -494,12 +503,12 @@ function App() {
   React.useEffect(() => {
     drawOverlay("A");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [A.imageBase64, A.points, A.boxes, heatmapIntensity]);
+  }, [A.imageBase64, A.points, A.boxes, heatmapIntensity, heatmapColorMode]);
 
   React.useEffect(() => {
     drawOverlay("B");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [B.imageBase64, B.points, B.boxes, heatmapIntensity]);
+  }, [B.imageBase64, B.points, B.boxes, heatmapIntensity, heatmapColorMode]);
 
   // Auto-export para Figma: quando a análise terminar (single-image),
   // gera um PNG com heatmap/boxes e envia via pluginMessage.
@@ -635,7 +644,7 @@ function App() {
     // (contain), respeitando offsetX/offsetY.
     ctx.save();
     ctx.translate(offsetX, offsetY);
-    drawHeat(ctx, state.points, dispW, dispH, scheme, globalIntensity);
+    drawHeat(ctx, state.points, dispW, dispH, scheme, globalIntensity, imgNaturalW, imgNaturalH);
     drawBoxesOverlay(ctx, state.boxes, dispW, dispH, imgNaturalW, imgNaturalH);
     ctx.restore();
   }
@@ -1245,7 +1254,16 @@ function App() {
         const scheme = heatmapColorMode === 'auto' ? detectDominantColor(img) : heatmapColorMode;
         console.log(`🎨 [EXPORT ${variant}] Scheme: ${scheme === 'cool' ? '❄️ COOL (blue)' : '🔥 WARM (red)'}`);
         // Export: somente heatmap (sem "TOP ELEMENTS"/boxes)
-        drawHeat(ctx, state.points, outW, outH, scheme, heatmapIntensity / 100);
+        drawHeat(
+          ctx,
+          state.points,
+          outW,
+          outH,
+          scheme,
+          heatmapIntensity / 100,
+          img.naturalWidth,
+          img.naturalHeight
+        );
 
         return canvas;
       };

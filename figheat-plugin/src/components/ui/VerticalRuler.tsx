@@ -30,7 +30,7 @@ export function VerticalRuler({ topBandPx, bottomBandPx }: VerticalRulerProps) {
       aria-hidden
     >
       <div
-        className="shrink-0 border-b border-[var(--stroke)] box-border"
+        className="shrink-0 figheat-ruler-band-b box-border"
         style={{
           height: top || undefined,
           minHeight: top || 1,
@@ -87,7 +87,7 @@ export function VerticalRuler({ topBandPx, bottomBandPx }: VerticalRulerProps) {
         </div>
       </div>
       <div
-        className="shrink-0 border-t border-[var(--stroke)] box-border"
+        className="shrink-0 figheat-ruler-band-t box-border"
         style={{
           height: bottom || undefined,
           minHeight: bottom || 1,
