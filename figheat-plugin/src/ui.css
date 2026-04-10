@@ -16,8 +16,8 @@
   --radius-8: 8px;
   --radius-10: 10px;
   --radius-full: 9999px;
-  /* Header / footer / régua: mesma espessura e leveza da linha do footer */
-  --hairline-divider: 1px solid rgba(225, 228, 234, 0.55);
+  /* Header / footer / régua: mesma cor e espessura que --stroke */
+  --hairline-divider: 1px solid var(--stroke);
 }
 
 * { box-sizing: border-box; }
@@ -90,7 +90,7 @@ html, body {
   overflow: hidden;
   background: var(--bg);
   border-top: none;
-  border-bottom: var(--hairline-divider);
+  border-bottom: none;
 }
 .figheat-left-panel {
   flex: 0 0 48%;
@@ -138,7 +138,7 @@ html, body {
 /* Top bar - structured (também usado nas células quando a linha vertical sobe) */
 .figheat-top-bar {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   justify-content: flex-start;
   padding: 0;
   background: var(--bg);
@@ -242,7 +242,7 @@ img.figheat-logo-img {
 }
 
 .figheat-content {
-  padding: 0 16px 16px;
+  padding: 16px;
   flex: 1;
   min-height: 0;
   overflow-x: hidden;
@@ -331,7 +331,7 @@ img.figheat-logo-img {
     height: 20px;
   }
   .figheat-content {
-    padding: 0 12px 12px;
+    padding: 12px;
   }
   .input, .selectPageType {
     min-height: 44px;
@@ -527,9 +527,22 @@ img.figheat-logo-img {
   margin-bottom: 16px;
 }
 
-/* Linha superior do footer — alinhada ao header (--hairline-divider) */
-.figheat-plugin-footer {
-  border-top: var(--hairline-divider);
+
+/* Régua: uma linha vertical só à direita (pseudo-elemento por cima das faixas) */
+.figheat-vertical-ruler {
+  position: relative;
+  border-right: none;
+}
+.figheat-vertical-ruler::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--stroke);
+  z-index: 20;
+  pointer-events: none;
 }
 
 /* Régua: linha sob o header / sobre o footer = mesma hairline */
@@ -537,6 +550,10 @@ img.figheat-logo-img {
   border-bottom: var(--hairline-divider);
 }
 .figheat-ruler-band-t {
+  border-top: var(--hairline-divider);
+}
+
+.figheat-plugin-footer {
   border-top: var(--hairline-divider);
 }
 
@@ -590,9 +607,11 @@ img.figheat-logo-img {
   box-shadow: var(--shadow);
 }
 
-/* Zona de upload (tracejado): cantos quadrados — reforço sobre qualquer cascade */
+/* Zona de upload (tracejado): cantos quadrados — padding igual em todos os lados */
 .figheat-upload-dropzone {
   border-radius: 0 !important;
+  border-color: var(--stroke) !important;
+  padding: 24px;
 }
 
 .preview img {

@@ -1379,7 +1379,7 @@ function App() {
         <VerticalRuler topBandPx={rulerBandHeights.top} bottomBandPx={rulerBandHeights.bottom} />
         <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
       <div ref={headerBarRef} className="figheat-top-bar">
-        <div className="figheat-top-bar-cell figheat-top-bar-cell-left figheat-header-brand flex-[0_0_48%] min-w-[240px] max-w-[320px] border-r border-[var(--stroke)] pt-4 pb-7 flex items-center justify-between pr-2">
+        <div className="figheat-top-bar-cell figheat-top-bar-cell-left figheat-header-brand flex-[0_0_48%] min-w-[240px] max-w-[320px] border-r border-[var(--stroke)] py-5 flex items-center justify-between pr-2">
           <div className="flex items-center gap-2">
             <img src={vectorLogo} alt="" className="figheat-logo-flame figheat-logo-img" />
             <span className="figheat-header-title">FigHeat</span>
@@ -1397,7 +1397,7 @@ function App() {
             </svg>
           </button>
         </div>
-        <div className="figheat-top-bar-cell figheat-top-bar-cell-right flex-1 min-w-0 flex items-center justify-center pt-4 pb-7">
+        <div className="figheat-top-bar-cell figheat-top-bar-cell-right flex-1 min-w-0 flex items-center justify-center py-5">
             {(analysisInProgress || analysisController) ? (
               <div className="status-loading">
                 <svg

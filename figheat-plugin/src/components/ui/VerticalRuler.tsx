@@ -26,7 +26,7 @@ export function VerticalRuler({ topBandPx, bottomBandPx }: VerticalRulerProps) {
 
   return (
     <div
-      className="figheat-vertical-ruler w-10 shrink-0 flex flex-col border-r border-[var(--stroke)] bg-white min-h-0 select-none"
+      className="figheat-vertical-ruler w-10 shrink-0 flex flex-col bg-white min-h-0 select-none"
       aria-hidden
     >
       <div
@@ -46,9 +46,6 @@ export function VerticalRuler({ topBandPx, bottomBandPx }: VerticalRulerProps) {
             bottom: TRACK_INSET_PX,
           }}
         >
-          {/* Linha guia vertical */}
-          <div className="absolute top-0 bottom-0 right-0 w-px bg-[var(--stroke)] z-[1]" />
-
           {MARKS.map((n, i) => {
             const topPct = (i / lastIdx) * 100;
             const isFirst = i === 0;

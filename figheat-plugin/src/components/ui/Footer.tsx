@@ -63,11 +63,8 @@ export function Footer({ mainnetLogoSrc }: FooterProps) {
         </a>
       </div>
 
-      <div className="flex-1 min-w-0 text-center px-2 self-center">
-        <p className="text-[9px] leading-snug text-neutral-500">
-          Each analysis uses cloud AI (Google Gemini) via your API. Usage and costs follow your provider&apos;s plan.
-        </p>
-        <p className="mt-0.5 text-[8px] text-neutral-400 leading-none">© 2026</p>
+      <div className="flex-1 min-w-0 flex items-center justify-center px-2">
+        <p className="text-[8px] text-neutral-400 leading-none">© 2026</p>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">

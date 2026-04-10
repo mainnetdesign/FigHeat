@@ -52,8 +52,8 @@ export function UploadArea({ onFileSelect, accept = "image/png,image/jpeg,image/
     <div
       className="
         figheat-upload-dropzone
-        relative flex-1 min-h-[160px] flex flex-col items-center justify-center gap-4
-        p-6 border border-dashed border-neutral-200 !rounded-none bg-neutral-50
+        relative flex-1 min-h-[160px] flex flex-col items-stretch
+        border border-dashed !rounded-none bg-neutral-50
       "
       onDrop={handleDrop}
       onDragOver={handleDragOver}
@@ -65,21 +65,25 @@ export function UploadArea({ onFileSelect, accept = "image/png,image/jpeg,image/
         onChange={handleChange}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
       />
-      <CloudUploadIcon />
-      <div className="text-sm font-medium text-neutral-900 text-center">
-        Choose a file or drag & drop it here.
+      <div className="flex-1 min-h-0 basis-0" aria-hidden />
+      <div className="flex shrink-0 flex-col items-center gap-3">
+        <CloudUploadIcon />
+        <div className="text-sm font-medium text-neutral-900 text-center">
+          Choose a file or drag & drop it here.
+        </div>
+        <div className="text-xs text-neutral-500 text-center">
+          PNG, JPG, WEBP, up to 50 MB.
+        </div>
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={disabled}
+          className="px-6 py-2.5 text-base font-medium text-neutral-700 bg-neutral-100 rounded-none border-0 hover:bg-neutral-200 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-1"
+        >
+          Browse File
+        </button>
       </div>
-      <div className="text-xs text-neutral-500 text-center">
-        PNG, JPG, WEBP, up to 50 MB.
-      </div>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={disabled}
-        className="px-6 py-2.5 text-base font-medium text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-100 hover:border-neutral-300 disabled:opacity-50"
-      >
-        Browse File
-      </button>
+      <div className="flex-1 min-h-0 basis-0" aria-hidden />
     </div>
   );
 }
