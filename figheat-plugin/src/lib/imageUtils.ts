@@ -26,6 +26,79 @@ export function fitWithin(
   };
 }
 
+/** Limite do snapshot exportado para o Figma (antes: 1920×1080). */
+export const EXPORT_SNAPSHOT_MAX_W = 3840;
+export const EXPORT_SNAPSHOT_MAX_H = 2160;
+
+/** Render interno N× maior e depois redução — suaviza bordas do heatmap. */
+export const EXPORT_SUPER_SAMPLE = 2;
+
+/** Teto ~15MP no canvas hi-res para reduzir risco de OOM no iframe do plugin. */
+export const EXPORT_MAX_HI_PIXELS = 15_000_000;
+
+/**
+ * Monta o canvas final: imagem + camada de heatmap, com supersampling opcional.
+ */
+export function composeExportSnapshotCanvas(
+  img: HTMLImageElement,
+  paintHeatmap: (ctx: CanvasRenderingContext2D, w: number, h: number) => void,
+  options?: {
+    maxW?: number;
+    maxH?: number;
+    superSample?: number;
+    maxHiPixels?: number;
+  }
+): HTMLCanvasElement {
+  const maxW = options?.maxW ?? EXPORT_SNAPSHOT_MAX_W;
+  const maxH = options?.maxH ?? EXPORT_SNAPSHOT_MAX_H;
+  let superSample = options?.superSample ?? EXPORT_SUPER_SAMPLE;
+  const maxHiPixels = options?.maxHiPixels ?? EXPORT_MAX_HI_PIXELS;
+
+  const nw = img.naturalWidth;
+  const nh = img.naturalHeight;
+  if (nw <= 0 || nh <= 0) throw new Error("Invalid image dimensions for export.");
+
+  const { w: outW, h: outH } = fitWithin(nw, nh, maxW, maxH);
+
+  let hiW = Math.round(outW * superSample);
+  let hiH = Math.round(outH * superSample);
+  if (hiW * hiH > maxHiPixels) {
+    superSample = 1;
+    hiW = outW;
+    hiH = outH;
+  }
+
+  const hi = document.createElement("canvas");
+  hi.width = hiW;
+  hi.height = hiH;
+  const ctxHi = hi.getContext("2d");
+  if (!ctxHi) throw new Error("Failed to create export canvas.");
+
+  ctxHi.imageSmoothingEnabled = true;
+  ctxHi.imageSmoothingQuality = "high";
+  ctxHi.fillStyle = "#ffffff";
+  ctxHi.fillRect(0, 0, hiW, hiH);
+  ctxHi.drawImage(img, 0, 0, hiW, hiH);
+  paintHeatmap(ctxHi, hiW, hiH);
+
+  if (superSample <= 1) {
+    return hi;
+  }
+
+  const out = document.createElement("canvas");
+  out.width = outW;
+  out.height = outH;
+  const ctxOut = out.getContext("2d");
+  if (!ctxOut) throw new Error("Failed to create export output canvas.");
+
+  ctxOut.imageSmoothingEnabled = true;
+  ctxOut.imageSmoothingQuality = "high";
+  ctxOut.fillStyle = "#ffffff";
+  ctxOut.fillRect(0, 0, outW, outH);
+  ctxOut.drawImage(hi, 0, 0, hiW, hiH, 0, 0, outW, outH);
+  return out;
+}
+
 export type OptimizeImageResult = {
   bytes: Uint8Array;
   base64: string;

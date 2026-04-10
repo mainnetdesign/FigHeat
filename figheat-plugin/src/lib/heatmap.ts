@@ -98,17 +98,34 @@ export function detectDominantColor(imageElement: HTMLImageElement): ColorScheme
 
 const GRADIENT_COOL: Array<{ stop: number; color: string }> = [
   { stop: 0.0, color: "rgba(0, 255, 200, 0)" },
-  { stop: 0.3, color: "rgba(0, 200, 255, 0.4)" },
-  { stop: 0.6, color: "rgba(0, 120, 255, 0.7)" },
-  { stop: 1.0, color: "rgba(80, 80, 255, 0.95)" },
+  { stop: 0.22, color: "rgba(0, 220, 245, 0.28)" },
+  { stop: 0.45, color: "rgba(0, 190, 255, 0.5)" },
+  { stop: 0.68, color: "rgba(0, 140, 255, 0.68)" },
+  { stop: 0.88, color: "rgba(60, 100, 255, 0.35)" },
+  { stop: 1.0, color: "rgba(80, 80, 255, 0)" },
 ];
 
+/**
+ * Warm: só laranja / âmbar. Mais stops na borda = menos banding antes do blur.
+ */
 const GRADIENT_WARM: Array<{ stop: number; color: string }> = [
-  { stop: 0.0, color: "rgba(255, 255, 0, 0)" },
-  { stop: 0.3, color: "rgba(255, 200, 0, 0.4)" },
-  { stop: 0.6, color: "rgba(255, 120, 0, 0.7)" },
-  { stop: 1.0, color: "rgba(255, 0, 0, 0.95)" },
+  { stop: 0.0, color: "rgba(210, 65, 0, 0.92)" },
+  { stop: 0.18, color: "rgba(232, 78, 0, 0.75)" },
+  { stop: 0.34, color: "rgba(255, 108, 0, 0.58)" },
+  { stop: 0.5, color: "rgba(255, 138, 35, 0.4)" },
+  { stop: 0.64, color: "rgba(255, 162, 70, 0.26)" },
+  { stop: 0.78, color: "rgba(255, 185, 105, 0.14)" },
+  { stop: 0.9, color: "rgba(255, 200, 130, 0.05)" },
+  { stop: 1.0, color: "rgba(255, 210, 145, 0)" },
 ];
+
+/** Opacidade por índice do stop: centro forte, borda suave; último = 0 (só cor do stop importa). */
+function heatmapStopBaseOpacity(stopIndex: number, totalStops: number): number {
+  if (totalStops <= 1) return 0.85;
+  if (stopIndex >= totalStops - 1) return 0;
+  const t = stopIndex / (totalStops - 1);
+  return 0.08 + 0.82 * (1 - t);
+}
 
 export function getHeatmapGradient(
   scheme: ColorScheme
@@ -116,19 +133,18 @@ export function getHeatmapGradient(
   return scheme === "cool" ? [...GRADIENT_COOL] : [...GRADIENT_WARM];
 }
 
-function drawHeatmapBlobs(
-  ctx: CanvasRenderingContext2D,
+/** Desenha formas do heatmap sem blur (vetor + gradiente). */
+function drawHeatmapBlobShapes(
+  target: CanvasRenderingContext2D,
   points: HeatmapPoint[],
   w: number,
   h: number,
-  scheme: ColorScheme,
-  globalIntensity: number = 1
+  globalIntensity: number,
+  gradientColors: Array<{ stop: number; color: string }>,
+  nStops: number
 ): void {
-  if (!w || !h || w <= 0 || h <= 0) return;
-
-  const gradientColors = getHeatmapGradient(scheme);
-  ctx.globalCompositeOperation = "source-over";
-  ctx.filter = "blur(28px)";
+  target.globalCompositeOperation = "source-over";
+  target.filter = "none";
 
   for (const p of points) {
     const x = (p.x / 100) * w;
@@ -136,11 +152,11 @@ function drawHeatmapBlobs(
     const intensity = Math.max(0.75, clamp01(Number(p.intensity ?? 0.75)));
 
     const baseRadius = Math.max(1, Math.min(w, h) * 0.16 * intensity);
-    const numBlobs = 8;
+    const numBlobs = 6;
     const flowDirection = (x * 0.17 + y * 0.17) % (Math.PI * 2);
 
     for (let i = 0; i < numBlobs; i++) {
-      const progress = i / (numBlobs - 1);
+      const progress = numBlobs <= 1 ? 0 : i / (numBlobs - 1);
       const spreadAngle = (i / numBlobs) * Math.PI * 2 + flowDirection;
       const spreadRadius =
         baseRadius * (0.4 + progress * 0.6) * (0.7 + Math.sin(i * 0.8) * 0.3);
@@ -159,17 +175,16 @@ function drawHeatmapBlobs(
 
       if (radius <= 0) continue;
 
-      ctx.save();
+      target.save();
       const scaleX = 0.75 + Math.sin(i * 0.8) * 0.35;
       const scaleY = 0.75 + Math.cos(i * 0.9) * 0.35;
-      ctx.translate(blobX, blobY);
-      ctx.rotate(spreadAngle + i * 0.25);
-      ctx.scale(scaleX, scaleY);
+      target.translate(blobX, blobY);
+      target.rotate(spreadAngle + i * 0.25);
+      target.scale(scaleX, scaleY);
 
-      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+      const gradient = target.createRadialGradient(0, 0, 0, 0, 0, radius);
       gradientColors.forEach((colorStop, idx) => {
-        const baseOpacity =
-          idx === gradientColors.length - 1 ? 0 : [0.8, 0.65, 0.4][idx] || 0.5;
+        const baseOpacity = heatmapStopBaseOpacity(idx, nStops);
         const finalOpacity = baseOpacity * blobIntensity * globalIntensity;
         const colorWithOpacity = colorStop.color.replace(
           /[\d.]+\)$/,
@@ -178,14 +193,53 @@ function drawHeatmapBlobs(
         gradient.addColorStop(colorStop.stop, colorWithOpacity);
       });
 
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(0, 0, radius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      target.fillStyle = gradient;
+      target.beginPath();
+      target.arc(0, 0, radius, 0, Math.PI * 2);
+      target.fill();
+      target.restore();
     }
   }
+}
 
+/**
+ * Camada offscreen + um único blur ao compor: evita “grelha”/pixels nas bordas
+ * que aparecem quando o blur aplica a cada path em separado.
+ */
+function drawHeatmapBlobs(
+  ctx: CanvasRenderingContext2D,
+  points: HeatmapPoint[],
+  w: number,
+  h: number,
+  scheme: ColorScheme,
+  globalIntensity: number = 1
+): void {
+  if (!w || !h || w <= 0 || h <= 0) return;
+
+  const gradientColors = getHeatmapGradient(scheme);
+  const nStops = gradientColors.length;
+
+  const iw = Math.max(1, Math.round(w));
+  const ih = Math.max(1, Math.round(h));
+  const layer = document.createElement("canvas");
+  layer.width = iw;
+  layer.height = ih;
+  const lctx = layer.getContext("2d");
+  if (!lctx) return;
+
+  lctx.imageSmoothingEnabled = true;
+  lctx.imageSmoothingQuality = "high";
+
+  drawHeatmapBlobShapes(lctx, points, w, h, globalIntensity, gradientColors, nStops);
+
+  const blurPx = Math.max(24, Math.min(50, Math.min(w, h) * 0.038));
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.filter = `blur(${blurPx}px)`;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(layer, 0, 0, w, h);
+  ctx.restore();
   ctx.filter = "none";
 }
 

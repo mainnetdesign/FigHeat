@@ -109,5 +109,5 @@ export type UiToCode =
 
 export type ColorScheme = 'warm' | 'cool';
 
-/** Controle do heatmap: Auto = detecção pela imagem; warm = laranja; cool = azul */
-export type HeatmapColorMode = 'auto' | 'warm' | 'cool';
+/** Esquema visual do heatmap: warm (laranja) é o padrão do FigHeat; cool = azul */
+export type HeatmapColorMode = 'warm' | 'cool';

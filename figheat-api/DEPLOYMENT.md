@@ -72,6 +72,13 @@ curl https://SUA_URL/api/cv/analyze
 # Resposta esperada: "ok" (ou erro 503 se a chave não estiver configurada)
 ```
 
+### Plugin mostra “Could not connect to API” (mas o `curl` funciona)
+
+- **Reabrir o plugin** depois de alterar `manifest.json` (`networkAccess`): o Figma só aplica domínios novos ao recarregar.
+- Confirme a URL **sem barra final**: `https://seu-projeto.vercel.app` (o plugin acrescenta `/api/cv/analyze`).
+- No dashboard Vercel: variável **`GOOGLE_GENERATIVE_AI_API_KEY`** definida; em Hobby, timeout de função pode cortar pedidos longos.
+- Se o erro continuar, use **Test Connection** no plugin: a mensagem pode incluir uma linha **Details:** com a causa real (DNS, TLS, etc.).
+
 ---
 
 ## CORS

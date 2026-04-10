@@ -168,8 +168,6 @@ function bytesToDataUrl(bytes: Uint8Array, mime = "image/png") {
   return `data:${mime};base64,${b64}`;
 }
 
-let currentAnalyzeController: AbortController | null = null;
-
 figma.ui.onmessage = async (msg: UiToCode) => {
   try {
     if (msg.type === "GET_BASE_URL") {
@@ -190,10 +188,7 @@ figma.ui.onmessage = async (msg: UiToCode) => {
     }
 
     if (msg.type === "CANCEL_ANALYSIS") {
-      if (currentAnalyzeController) {
-        currentAnalyzeController.abort();
-        currentAnalyzeController = null;
-      }
+      // fetch() no main thread do plugin não aceita `signal`; cancel na UI via pendências.
       return;
     }
 
@@ -248,9 +243,6 @@ figma.ui.onmessage = async (msg: UiToCode) => {
 
       post({ type: "STATUS", message: `Sending for analysis (${msg.variant})...` });
 
-      const controller = new AbortController();
-      currentAnalyzeController = controller;
-
       let res: Response;
       try {
         const endpoint = baseUrl.includes('/api/') 
@@ -261,20 +253,12 @@ figma.ui.onmessage = async (msg: UiToCode) => {
           method: "POST",
           headers: { "Content-Type": "application/octet-stream" },
           body: msg.bytes as unknown as BodyInit,
-          signal: controller.signal,
         });
-      } catch (fetchError: any) {
-        currentAnalyzeController = null;
-        if (fetchError?.name === "AbortError") {
-          post({ type: "CANCELLED" });
-          return;
-        }
+      } catch (_fetchError: unknown) {
         throw new Error(
           `Could not connect to API at ${baseUrl}. Check that the server is running and the URL is correct.`
         );
       }
-
-      currentAnalyzeController = null;
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -344,6 +328,9 @@ figma.ui.onmessage = async (msg: UiToCode) => {
       if (body !== undefined) {
         if (typeof body === "string") headers["Content-Type"] = "application/json";
         else headers["Content-Type"] = "application/octet-stream";
+      }
+      if (!headers["User-Agent"] && !headers["user-agent"]) {
+        headers["User-Agent"] = "FigHeat-Figma-Plugin/1.0";
       }
       try {
         const res = await fetch(url, {

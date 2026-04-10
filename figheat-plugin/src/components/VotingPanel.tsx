@@ -5,7 +5,7 @@
 
 import * as React from "react";
 import type { HeatmapPoint, BoundingBox, AnalysisInsights, ColorScheme } from "../types";
-import { detectDominantColor, drawHeatOnCanvas, drawBoxes } from "../lib/heatmap";
+import { drawHeatOnCanvas, drawBoxes } from "../lib/heatmap";
 
 export type VotingOption = {
   heatmapPoints: HeatmapPoint[];
@@ -28,8 +28,8 @@ type VotingPanelProps = {
   onCancel: () => void;
   canvasARef: React.RefObject<HTMLCanvasElement>;
   canvasBRef: React.RefObject<HTMLCanvasElement>;
-  /** Quando null, usa detecção automática por imagem */
-  colorSchemeOverride?: ColorScheme | null;
+  /** Padrão FigHeat: warm (laranja) */
+  colorSchemeOverride?: ColorScheme;
 };
 
 export function VotingPanel({
@@ -40,10 +40,9 @@ export function VotingPanel({
   onCancel,
   canvasARef,
   canvasBRef,
-  colorSchemeOverride = null,
+  colorSchemeOverride = "warm",
 }: VotingPanelProps) {
-  const schemeForImg = (img: HTMLImageElement): ColorScheme =>
-    colorSchemeOverride ?? detectDominantColor(img);
+  const scheme: ColorScheme = colorSchemeOverride;
   return (
     <div className="voting">
       <div className="votingTitle">🗳️ Vote for the best analysis:</div>
@@ -87,9 +86,8 @@ export function VotingPanel({
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0);
 
-                const schemeA = schemeForImg(img);
                 const points = votingResults.optionA?.heatmapPoints ?? [];
-                drawHeatOnCanvas(ctx, points, canvas.width, canvas.height, schemeA, img.naturalWidth, img.naturalHeight);
+                drawHeatOnCanvas(ctx, points, canvas.width, canvas.height, scheme, img.naturalWidth, img.naturalHeight);
                 drawBoxes(ctx, votingResults.optionA?.boundingBoxes ?? [], canvas.width, canvas.height);
               }}
             />
@@ -152,9 +150,8 @@ export function VotingPanel({
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0);
 
-                const schemeB = schemeForImg(img);
                 const points = votingResults.optionB?.heatmapPoints ?? [];
-                drawHeatOnCanvas(ctx, points, canvas.width, canvas.height, schemeB, img.naturalWidth, img.naturalHeight);
+                drawHeatOnCanvas(ctx, points, canvas.width, canvas.height, scheme, img.naturalWidth, img.naturalHeight);
                 drawBoxes(ctx, votingResults.optionB?.boundingBoxes ?? [], canvas.width, canvas.height);
               }}
             />

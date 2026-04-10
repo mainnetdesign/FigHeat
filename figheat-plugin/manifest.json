@@ -13,8 +13,19 @@
     }
   ],
   "networkAccess": {
-    "allowedDomains": ["*"],
-    "reasoning": "FigHeat connects to the user's API (localhost or hosted) for computer vision heatmap analysis.",
-    "devAllowedDomains": ["http://localhost:3000"]
+    "allowedDomains": [
+      "https://fig-heat.vercel.app",
+      "https://*.vercel.app",
+      "http://localhost:3000",
+      "https://localhost:3000",
+      "*"
+    ],
+    "reasoning": "FigHeat connects to the user's API (localhost, Vercel, or other hosts) for computer vision heatmap analysis.",
+    "devAllowedDomains": [
+      "http://localhost:3000",
+      "https://localhost:3000",
+      "https://fig-heat.vercel.app",
+      "https://*.vercel.app"
+    ]
   }
 }

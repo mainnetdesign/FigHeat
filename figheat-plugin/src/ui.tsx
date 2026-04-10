@@ -25,16 +25,15 @@ import type {
   ResultState,
   HeatmapColorMode,
 } from "./types";
-import {
-  detectDominantColor,
-  drawHeat,
-  drawBoxesOverlay,
-} from "./lib/heatmap";
+import { drawHeat, drawBoxesOverlay } from "./lib/heatmap";
 import {
   loadImage,
   optimizeImage,
   fitWithin,
   canvasToPngBytes,
+  composeExportSnapshotCanvas,
+  EXPORT_SNAPSHOT_MAX_W,
+  EXPORT_SNAPSHOT_MAX_H,
 } from "./lib/imageUtils";
 import { VotingPanel } from "./components/VotingPanel";
 import mainnetLogo from "./assets/Logo_Mainnet.png";
@@ -169,6 +168,13 @@ const FLASH_RECOVERY_HINT_EN =
 const FLASH_FORMAT_SINGLE_EN =
   "Gemini returned an unexpected format. Try a simpler layout, a smaller image, or switch to Pro if the problem persists.";
 
+function formatApiConnectionError(url: string, err: unknown): string {
+  const base = `Could not connect to API at ${url}. Check that the server is running and the URL is correct.`;
+  const raw = err instanceof Error ? err.message : String(err);
+  if (!raw || raw === "Failed to fetch" || raw === "Aborted") return base;
+  return `${base}\n\nDetails: ${raw}`;
+}
+
 /** Ajusta texto de erro para o utilizador (Flash: timeout com dica extra; formato: mensagem única). */
 function formatAnalysisErrorForDisplay(
   message: string,
@@ -201,7 +207,7 @@ function App() {
 
   const [abMode, setAbMode] = React.useState(false);
   const [heatmapIntensity] = React.useState(100); // Fixo em 100% (intensidade total)
-  const [heatmapColorMode, setHeatmapColorMode] = React.useState<HeatmapColorMode>('warm'); // Padrão: laranja; auto/cool se exposto na UI
+  const [heatmapColorMode] = React.useState<HeatmapColorMode>('warm');
   
   // Seletor de modelo
   const [selectedModel, setSelectedModel] = React.useState<'gemini-2.0-flash' | 'gemini-3-pro'>('gemini-2.0-flash');
@@ -304,7 +310,7 @@ function App() {
       setStatus("Download failed");
       const msg = e instanceof Error ? e.message : "Export failed";
       const isFetchError = msg.includes("fetch") || msg.includes("Failed to fetch") || msg.includes("NetworkError");
-      setError(isFetchError ? `Could not connect to API at ${url}. Is the server running?` : msg);
+      setError(isFetchError ? formatApiConnectionError(url, e) : msg);
     }
   }, [baseUrl, fetchViaPlugin]);
 
@@ -331,7 +337,7 @@ function App() {
       const isFetchError = msg.includes("fetch") || msg.includes("Failed to fetch") || msg.includes("NetworkError");
       setError(
         isFetchError
-          ? `Could not connect to ${url}. Check: (1) Is the server running? (2) Close and reopen the plugin after changing the manifest.`
+          ? `${formatApiConnectionError(url, e)}\n\nTip: If you edited manifest.json (network domains), close and reopen the plugin.`
           : msg
       );
       setStatus("Error");
@@ -391,6 +397,8 @@ function App() {
   const analyzeAbModeRef = React.useRef(false);
   const statusContainerRef = React.useRef<HTMLDivElement | null>(null);
   const analyzeWithVotingIgnoreResultRef = React.useRef(false);
+  const analyzeWithVotingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const analyzeWithVotingProgressIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const analyzeOneInUITimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const analyzeOneInUIIgnoreResultRef = React.useRef(false);
   const lastAutoExportSignatureRef = React.useRef<string | null>(null);
@@ -637,7 +645,7 @@ function App() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, containerW, containerH);
 
-    const scheme = heatmapColorMode === "auto" ? detectDominantColor(img) : heatmapColorMode;
+    const scheme = heatmapColorMode;
     const globalIntensity = heatmapIntensity / 100;
 
     // Desenha heatmap/boxes apenas na área efetivamente ocupada pela imagem
@@ -855,9 +863,14 @@ function App() {
       clearAnalyzeProgressInterval();
       analysisInProgressRef.current = false;
       setAnalysisInProgress(false);
+      if (err?.name === "AbortError" || err?.message === "Aborted") {
+        setError(null);
+        setStatus("Cancelled");
+        return;
+      }
       const message =
         err?.message?.includes("fetch") || err?.message?.includes("Failed to fetch")
-          ? `Could not connect to API at ${url}. Check that the server is running and the URL is correct.`
+          ? formatApiConnectionError(url, err)
           : err?.message || "Analysis failed.";
       setError(message);
       setStatus("Error");
@@ -995,12 +1008,17 @@ function App() {
     const controller = new AbortController();
     setAnalysisController(controller);
 
-    const timeoutId = setTimeout(() => {
+    if (analyzeWithVotingTimeoutRef.current) clearTimeout(analyzeWithVotingTimeoutRef.current);
+    if (analyzeWithVotingProgressIntervalRef.current) clearInterval(analyzeWithVotingProgressIntervalRef.current);
+
+    analyzeWithVotingTimeoutRef.current = setTimeout(() => {
+      analyzeWithVotingTimeoutRef.current = null;
       analyzeWithVotingIgnoreResultRef.current = true;
       setError(`⏱️ Timeout: Analysis took more than ${timeoutSeconds}s. ${selectedModel === 'gemini-3-pro' ? 'Gemini 3 Pro is slower.' : 'Try a smaller image or disable Quick Mode.'}`);
       setStatus("Timeout");
       setAnalysisController(null);
       setAnalysisInProgress(false);
+      parent.postMessage({ pluginMessage: { type: "CANCEL_ANALYSIS" } }, "*");
     }, timeoutMs);
 
     const url = baseUrl.includes('/api/') 
@@ -1008,7 +1026,7 @@ function App() {
       : `${baseUrl}/api/cv/analyze-variations`;
 
     let lastElapsed = -1;
-    const progressInterval = setInterval(() => {
+    analyzeWithVotingProgressIntervalRef.current = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       if (elapsed !== lastElapsed) {
         lastElapsed = elapsed;
@@ -1021,8 +1039,14 @@ function App() {
         "Content-Type": "application/octet-stream",
         "X-Model": selectedModel,
       });
-      clearInterval(progressInterval);
-      clearTimeout(timeoutId);
+      if (analyzeWithVotingProgressIntervalRef.current) {
+        clearInterval(analyzeWithVotingProgressIntervalRef.current);
+        analyzeWithVotingProgressIntervalRef.current = null;
+      }
+      if (analyzeWithVotingTimeoutRef.current) {
+        clearTimeout(analyzeWithVotingTimeoutRef.current);
+        analyzeWithVotingTimeoutRef.current = null;
+      }
       setAnalysisController(null);
 
       if (analyzeWithVotingIgnoreResultRef.current) return;
@@ -1052,22 +1076,26 @@ function App() {
       setAnalysisInProgress(false);
       setStatus(`✅ Ready in ${totalTime}s! Vote for the best option.`);
     } catch (err: any) {
-      clearInterval(progressInterval);
-      clearTimeout(timeoutId);
+      if (analyzeWithVotingProgressIntervalRef.current) {
+        clearInterval(analyzeWithVotingProgressIntervalRef.current);
+        analyzeWithVotingProgressIntervalRef.current = null;
+      }
+      if (analyzeWithVotingTimeoutRef.current) {
+        clearTimeout(analyzeWithVotingTimeoutRef.current);
+        analyzeWithVotingTimeoutRef.current = null;
+      }
       setAnalysisController(null);
       setAnalysisInProgress(false);
       if (analyzeWithVotingIgnoreResultRef.current) return;
-      if (err.name === "AbortError") {
-        setError("❌ Analysis cancelled.");
+      if (err.name === "AbortError" || err?.message === "Aborted") {
+        setError(null);
         setStatus("Cancelled");
       } else {
         const urlTrim = (baseUrl || "").trim().replace(/\/$/, "");
         const msg = err?.message ?? "";
         const isFetchError = msg.includes("fetch") || msg.includes("Failed to fetch") || msg.includes("NetworkError");
         setError(
-          isFetchError
-            ? `Could not connect to API at ${urlTrim}. Check that the server is running and the URL is correct.`
-            : msg || "Failed to generate variations"
+          isFetchError ? formatApiConnectionError(urlTrim, err) : msg || "Failed to generate variations"
         );
         setStatus("Error");
         setSelectedInsights(null);
@@ -1076,17 +1104,41 @@ function App() {
   }
 
   function cancelAnalysis() {
-    if (analysisController) {
-      analyzeWithVotingIgnoreResultRef.current = true;
-      setAnalysisController(null);
-      setError("Analysis cancelled by user.");
-      setStatus("Cancelled");
-      setAnalysisInProgress(false);
-      return;
+    analyzeWithVotingIgnoreResultRef.current = true;
+    analyzeOneInUIIgnoreResultRef.current = true;
+
+    if (analyzeOneInUITimeoutRef.current) {
+      clearTimeout(analyzeOneInUITimeoutRef.current);
+      analyzeOneInUITimeoutRef.current = null;
     }
-    if (analysisInProgressRef.current) {
-      parent.postMessage({ pluginMessage: { type: "CANCEL_ANALYSIS" } }, "*");
+    if (analyzeWithVotingTimeoutRef.current) {
+      clearTimeout(analyzeWithVotingTimeoutRef.current);
+      analyzeWithVotingTimeoutRef.current = null;
     }
+    if (analyzeWithVotingProgressIntervalRef.current) {
+      clearInterval(analyzeWithVotingProgressIntervalRef.current);
+      analyzeWithVotingProgressIntervalRef.current = null;
+    }
+
+    clearAnalyzeProgressInterval();
+
+    const pendingList = [...pendingFetchMap.values()];
+    pendingFetchMap.clear();
+    for (const pending of pendingList) {
+      try {
+        pending.reject(Object.assign(new Error("Aborted"), { name: "AbortError" }));
+      } catch {
+        /* ignore */
+      }
+    }
+
+    parent.postMessage({ pluginMessage: { type: "CANCEL_ANALYSIS" } }, "*");
+
+    setAnalysisController(null);
+    analysisInProgressRef.current = false;
+    setAnalysisInProgress(false);
+    setError(null);
+    setStatus("Cancelled");
   }
 
   async function submitVote(chosenOption: 'A' | 'B') {
@@ -1232,40 +1284,22 @@ function App() {
 
         const img = await loadImage(state.imageBase64);
 
-        const { w: outW, h: outH } = fitWithin(
-          img.naturalWidth,
-          img.naturalHeight,
-          1920,
-          1080
-        );
+        const scheme = heatmapColorMode;
+        console.log(`🎨 [EXPORT ${variant}] Scheme: ${scheme === "cool" ? "❄️ COOL (blue)" : "🔥 WARM (red)"}`);
 
-        const canvas = document.createElement("canvas");
-        canvas.width = outW;
-        canvas.height = outH;
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Failed to create canvas.");
-
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, outW, outH);
-
-        ctx.drawImage(img, 0, 0, outW, outH);
-
-        const scheme = heatmapColorMode === 'auto' ? detectDominantColor(img) : heatmapColorMode;
-        console.log(`🎨 [EXPORT ${variant}] Scheme: ${scheme === 'cool' ? '❄️ COOL (blue)' : '🔥 WARM (red)'}`);
-        // Export: somente heatmap (sem "TOP ELEMENTS"/boxes)
-        drawHeat(
-          ctx,
-          state.points,
-          outW,
-          outH,
-          scheme,
-          heatmapIntensity / 100,
-          img.naturalWidth,
-          img.naturalHeight
-        );
-
-        return canvas;
+        // Resolução até 4K + supersampling 2× (ver composeExportSnapshotCanvas) para gradientes mais suaves
+        return composeExportSnapshotCanvas(img, (ctx, w, h) => {
+          drawHeat(
+            ctx,
+            state.points,
+            w,
+            h,
+            scheme,
+            heatmapIntensity / 100,
+            img.naturalWidth,
+            img.naturalHeight
+          );
+        });
       };
 
       let pngBytes: Uint8Array;
@@ -1289,7 +1323,12 @@ function App() {
         const totalWRaw = cA.width + gap + cB.width;
         const totalHRaw = Math.max(cA.height, cB.height);
 
-        const { w: totalW, h: totalH } = fitWithin(totalWRaw, totalHRaw, 1920, 1080);
+        const { w: totalW, h: totalH } = fitWithin(
+          totalWRaw,
+          totalHRaw,
+          EXPORT_SNAPSHOT_MAX_W,
+          EXPORT_SNAPSHOT_MAX_H
+        );
         const scale = Math.min(1, totalW / totalWRaw, totalH / totalHRaw);
 
         const wA = Math.round(cA.width * scale);
@@ -1552,7 +1591,7 @@ function App() {
           }}
           canvasARef={canvasVoteARef}
           canvasBRef={canvasVoteBRef}
-          colorSchemeOverride={heatmapColorMode === 'auto' ? null : heatmapColorMode}
+          colorSchemeOverride={heatmapColorMode}
         />
       )}
 
